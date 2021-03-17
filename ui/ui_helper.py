@@ -1,7 +1,7 @@
 from PIL import ImageTk, Image
 import cv2
 import tkinter as tk
-import function
+from function import choose_file
 
 
 def get_max_window():
@@ -21,7 +21,7 @@ def show_img(cv_img, canvas):
 
 
 def get_choose_file_button(window, btn_text, string_var=None):
-    button = tk.Button(window, text=btn_text, command=lambda: function.choose_file(string_var))  # 可以用lambda把var传进去
+    button = tk.Button(window, text=btn_text, command=lambda: choose_file(string_var))  # 可以用lambda把var传进去
     return button
 
 
