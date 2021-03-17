@@ -55,7 +55,7 @@ def real_detect(weights_, source_, img_size_,
         dataset = LoadImages(source, img_size=imgsz)
 
     # Get names and colors
-    names = model.module.names if hasattr(model, 'module') else model.names
+    names = model.module.names if hasattr(model, 'module') else model.names  # 应该是在这里获得names
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
 
     # Run inference
@@ -149,11 +149,22 @@ def real_detect(weights_, source_, img_size_,
     print(f'Done. ({time.time() - t0:.3f}s)')
 
 
-def func_detect(weights='yolov3.pt', source='data/images', img_size=640,
+def func_detect(weights='data/best.pt', source='data/res_test.mp4', img_size=640,
                 conf_thres=0.25, iou_thres=0.45, device='',
                 view_img=False, save_txt=False, save_conf=False,
-                classes=None, agnosticnms=False, augment=False,
+                classes=None, agnostic_nms=False, augment=False,
                 project='runs/detect', name='exp', exist_ok=False, save_img=False):
     with torch.no_grad():
         real_detect(weights, source, img_size, conf_thres, iou_thres, device, view_img, save_txt, save_conf,
-                    classes, agnosticnms, augment, project, name, exist_ok, save_img)
+                    classes, agnostic_nms, augment, project, name, exist_ok, save_img)
+
+
+def get_names(weights):
+    model = attempt_load(weights)
+    names = model.module.names if hasattr(model, 'module') else model.names
+    print(names)
+    return names
+
+
+if __name__ == '__main__':
+    func_detect(classes=[1])
