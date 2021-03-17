@@ -6,12 +6,12 @@ import os
 
 
 def get_max_window():
-    window = tk.Tk()
-    window.title("my window")
-    w, h = window.maxsize()
-    print(w, h)
-    window.geometry("{}x{}".format(w, h))
-    return window
+    res_window = tk.Tk()
+    res_window.title("my window")
+    w, h = res_window.maxsize()
+    # print(w, h)
+    res_window.geometry("{}x{}".format(w, h))
+    return res_window
 
 
 def show_img(cv_img, canvas):
@@ -21,8 +21,8 @@ def show_img(cv_img, canvas):
     canvas.pack()
 
 
-def get_choose_file_button(window, btn_text, string_var=None):
-    button = tk.Button(window, text=btn_text, command=lambda: choose_file(string_var))  # 可以用lambda把var传进去
+def get_choose_file_button(window, btn_text, label):
+    button = tk.Button(window, text=btn_text, command=lambda: choose_file(label))
     return button
 
 
@@ -35,12 +35,11 @@ def start_detect():
     pass
 
 
-def choose_file(string_var=None):
-    """:returns file_path"""
+def choose_file(label=None):
     file_path = filedialog.askopenfilename()
 
-    if string_var is not None:
-        string_var.set(file_path)
+    if label is not None:
+        label['text'] = file_path
 
     return file_path
 
@@ -56,4 +55,12 @@ def split_url(url):
 
 
 if __name__ == '__main__':
-    pass
+    window = get_max_window()
+
+    label = tk.Label(window)
+    label.pack()
+
+    label['text'] = "test text2"
+    print(label['text'])
+
+    window.mainloop()
