@@ -9,16 +9,42 @@ def get_max_window():
     res_window = tk.Tk()
     res_window.title("my window")
     w, h = res_window.maxsize()
-    # print(w, h)
     res_window.geometry("{}x{}".format(w, h))
     return res_window
 
 
-def show_img(cv_img, canvas):
+def show_image_auto_resize(canvas, cv_image):
+    # 获取canvas和图片的尺寸
+    canvas_width = canvas.winfo_reqwidth()
+    canvas_height = canvas.winfo_reqheight()
+
+    shape = img.shape
+    pic_width = shape[1]
+    pic_height = shape[0]
+
+    canvas_ratio = canvas_width / canvas_height
+    pic_ratio = pic_width / pic_height
+
+    # 尺寸自适应
+    if pic_ratio > canvas_ratio:
+        w = canvas_width
+        h = canvas_width / pic_ratio
+    elif pic_ratio < canvas_ratio:
+        h = canvas_height
+        w = canvas_height * pic_ratio
+    else:
+        w = canvas_width
+        h = canvas_height
+
+    result_cv_image = cv2.resize(cv_image, (int(w), int(h)))
+
+    # canvas显示opencv格式的图片
     global tk_img  # 必须保持对图片的引用
-    tk_img = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)))
-    canvas.create_image(0, 0, image=tk_img)
-    canvas.pack()
+    tk_img = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(result_cv_image, cv2.COLOR_BGR2RGB)))
+
+    center_x = int(canvas_width / 2)
+    center_y = int(canvas_height / 2)
+    canvas.create_image(center_x, center_y, image=tk_img)
 
 
 def get_choose_file_button(window, btn_text, label):
@@ -27,7 +53,6 @@ def get_choose_file_button(window, btn_text, label):
 
 
 def rotate_video():
-    # TODO:
     pass
 
 
@@ -54,13 +79,18 @@ def split_url(url):
     return result
 
 
+def init_window():
+    pass
+
+
 if __name__ == '__main__':
-    window = get_max_window()
+    window = tk.Tk()
+    # window.geometry('500x300')
 
-    label = tk.Label(window)
-    label.pack()
+    canvas = tk.Canvas(window, bg='green', width=1000, height=600)
+    canvas.pack()
 
-    label['text'] = "test text2"
-    print(label['text'])
+    img = cv2.imread(r"C:\Users\Meleny\Pictures\wallpaper\222_small.jpg")
 
+    show_image_auto_resize(canvas, img)
     window.mainloop()
