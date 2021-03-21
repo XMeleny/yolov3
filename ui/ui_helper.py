@@ -9,7 +9,13 @@ def get_max_window():
     res_window = tk.Tk()
     res_window.title("my window")
     w, h = res_window.maxsize()
-    res_window.geometry("{}x{}".format(w, h))
+    res_window.configure(width=w, height=h)
+    # print(w, h)
+    # print(res_window.winfo_width())
+    # print(res_window.winfo_reqwidth())
+    # print(res_window.winfo_vrootwidth())
+    # print(res_window.winfo_screenmmwidth())
+    # print(res_window.winfo_screenwidth())
     return res_window
 
 
@@ -52,6 +58,12 @@ def get_choose_file_button(window, btn_text, label):
     return button
 
 
+def get_choose_file_button_and_label(window):
+    label = tk.Label(window)
+    button = tk.Button(window, command=lambda: choose_file(label))
+    return button, label
+
+
 def rotate_video():
     pass
 
@@ -61,12 +73,17 @@ def start_detect():
 
 
 def choose_file(label=None):
+    # TODO: 文件类型限制。比如视频应该为mp4等，权重文件为pt
     file_path = filedialog.askopenfilename()
 
     if label is not None:
         label['text'] = file_path
 
     return file_path
+
+
+def choose_classes():
+    pass
 
 
 def split_url(url):
@@ -79,16 +96,44 @@ def split_url(url):
     return result
 
 
+def log():
+    """保存log文件"""
+    pass
+
+
 def init_window():
+    # TODO: 用变量把text们都存起来
     window = get_max_window()
-    # window.geometry('500x300')
 
-    canvas = tk.Canvas(window, bg='green', width=500, height=400)
-    canvas.pack()
+    canvas = tk.Canvas(window, bg='green', width=window.winfo_reqwidth(), height=400)  # TODO: height
+    canvas.grid(row=0, columnspan=4)
 
-    img = cv2.imread(r"C:\Users\Meleny\Pictures\wallpaper\222_small.jpg")
+    choose_video_button, video_path_label = get_choose_file_button_and_label(window)
+    choose_video_button['text'] = "选择视频"
+    video_path_label['fg'] = 'gray'
+    video_path_label['bg'] = 'red'
+    rotate_video_button = tk.Button(window, text='旋转视频', command=rotate_video)
 
-    show_image_auto_resize(canvas, img)
+    choose_video_button.grid(row=1, column=0, sticky='we')
+    video_path_label.grid(row=1, column=1, sticky='we')
+    rotate_video_button.grid(row=1, column=2, sticky='we')
+
+    choose_model_button, model_path_label = get_choose_file_button_and_label(window)
+    choose_model_button['text'] = "选择模型"
+    model_path_label['fg'] = 'gray'
+    model_path_label['bg'] = 'red'
+    choose_classes_button = tk.Button(window, text="选择检测类别")  # TODO: command
+
+    choose_model_button.grid(row=2, column=0, sticky='we')
+    model_path_label.grid(row=2, column=1, sticky='we')
+    choose_classes_button.grid(row=2, column=2, sticky='we')
+
+    start_detect_button = tk.Button(window, text="开始检测")  # TODO: command
+    start_detect_button.grid(row=1, column=3, rowspan=2, sticky='wens')
+
+    process_label = tk.Label(window, text='进度...', fg='gray', bg='#000000')
+    process_label.grid(row=3, columnspan=4, sticky='we')
+
     window.mainloop()
 
 
