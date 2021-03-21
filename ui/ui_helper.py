@@ -107,18 +107,16 @@ def log():
 
 def init_window():
     # TODO: 用变量把text们都存起来
+    # TODO: 修改颜色
+    # TODO: 按钮可用状态转换
     window = get_max_window()
 
-    choose_file_weight = 1
-    file_path_label_weight = 4
-    function_button_weight = 1
-    detect_button_weight = 1
-    all_weitght = choose_file_weight + file_path_label_weight + function_button_weight + detect_button_weight
+    file_path_label_weight = 10
 
     canvas = tk.Canvas(window, bg='green',
                        width=window.winfo_width(),
                        height=window.winfo_height() - 200)
-    canvas.grid(row=0, columnspan=4)
+    canvas.grid(row=0, columnspan=file_path_label_weight + 3)
 
     choose_video_button, video_path_label = get_choose_file_button_and_label(window)
     choose_video_button['text'] = "选择视频"
@@ -127,8 +125,8 @@ def init_window():
     rotate_video_button = tk.Button(window, text='旋转视频', command=rotate_video)
 
     choose_video_button.grid(row=1, column=0, sticky='we')
-    video_path_label.grid(row=1, column=1, sticky='we')
-    rotate_video_button.grid(row=1, column=2, sticky='we')
+    video_path_label.grid(row=1, column=1, columnspan=file_path_label_weight, sticky='we')
+    rotate_video_button.grid(row=1, column=file_path_label_weight + 1, sticky='we')
 
     choose_model_button, model_path_label = get_choose_file_button_and_label(window)
     choose_model_button['text'] = "选择模型"
@@ -137,14 +135,14 @@ def init_window():
     choose_classes_button = tk.Button(window, text="选择检测类别")  # TODO: command
 
     choose_model_button.grid(row=2, column=0, sticky='we')
-    model_path_label.grid(row=2, column=1, sticky='we')
-    choose_classes_button.grid(row=2, column=2, sticky='we')
+    model_path_label.grid(row=2, column=1, columnspan=file_path_label_weight, sticky='we')
+    choose_classes_button.grid(row=2, column=file_path_label_weight + 1, sticky='we')
 
     start_detect_button = tk.Button(window, text="开始检测")  # TODO: command
-    start_detect_button.grid(row=1, column=3, rowspan=2, sticky='wens')
+    start_detect_button.grid(row=1, column=2 + file_path_label_weight, rowspan=2, sticky='wens')
 
     process_label = tk.Label(window, text='进度...', fg='gray', bg='#000000')
-    process_label.grid(row=3, columnspan=4, sticky='we')
+    process_label.grid(row=3, columnspan=3 + file_path_label_weight, sticky='we')
 
     window.mainloop()
 
