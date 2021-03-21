@@ -18,7 +18,7 @@ def show_image_auto_resize(canvas, cv_image):
     canvas_width = canvas.winfo_reqwidth()
     canvas_height = canvas.winfo_reqheight()
 
-    shape = img.shape
+    shape = cv_image.shape
     pic_width = shape[1]
     pic_height = shape[0]
 
@@ -80,17 +80,17 @@ def split_url(url):
 
 
 def init_window():
-    pass
-
-
-if __name__ == '__main__':
-    window = tk.Tk()
+    window = get_max_window()
     # window.geometry('500x300')
 
-    canvas = tk.Canvas(window, bg='green', width=1000, height=600)
+    canvas = tk.Canvas(window, bg='green', width=500, height=400)
     canvas.pack()
 
     img = cv2.imread(r"C:\Users\Meleny\Pictures\wallpaper\222_small.jpg")
 
     show_image_auto_resize(canvas, img)
     window.mainloop()
+
+
+if __name__ == '__main__':
+    init_window()
