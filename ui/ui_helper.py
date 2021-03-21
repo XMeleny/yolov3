@@ -12,9 +12,9 @@ def get_max_window():
     w, h = res_window.maxsize()
 
     res_window.geometry("{}x{}".format(w, h))
-    res_window.update()
     # res_window.configure(width=w, height=h)
 
+    # res_window.update()
     # print(w, h)
     # print(res_window.winfo_width())
     # print(res_window.winfo_reqwidth())
@@ -89,7 +89,7 @@ class FileType(Enum):
 def choose_file(file_type, label=None):
     if file_type == FileType.video:
         file_path = filedialog.askopenfilename(
-            filetypes=[("video file", ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv")])
+            filetypes=[("video file", ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv")])  # FIXME: 只支持这几种，有没有必要更多呢
     elif file_type == FileType.model:
         file_path = filedialog.askopenfilename(
             filetypes=[("model file", ".pt")])
@@ -157,6 +157,7 @@ def init_window():
     # TODO: 修改颜色
     # TODO: 按钮可用状态转换
     window = get_max_window()
+    window.update()
 
     file_path_label_weight = 10  # 表示路径标签的宽度横跨多少列
 
