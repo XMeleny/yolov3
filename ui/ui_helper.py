@@ -3,6 +3,7 @@ import cv2
 import tkinter as tk
 from tkinter import filedialog
 import os
+from enum import Enum
 
 
 def get_max_window():
@@ -57,14 +58,12 @@ def show_image_auto_resize(canvas, cv_image):
     canvas.create_image(center_x, center_y, image=tk_img)
 
 
-def get_choose_file_button(window, btn_text, label):
-    button = tk.Button(window, text=btn_text, command=lambda: choose_file(label))
-    return button
-
-
-def get_choose_file_button_and_label(window):
+def get_choose_file_button_and_label(window, file_type):
     label = tk.Label(window)
-    button = tk.Button(window, command=lambda: choose_file(label))
+    button = tk.Button(window,
+                       command=lambda: choose_file(file_type=file_type,
+                                                   label=label)
+                       )
     return button, label
 
 
@@ -82,14 +81,52 @@ def start_detect():
     pass
 
 
-def choose_file(label=None):
-    # TODO: 文件类型限制。比如视频应该为mp4等，权重文件为pt
-    file_path = filedialog.askopenfilename()
+class FileType(Enum):
+    video = 1
+    model = 2
+
+
+def choose_file(file_type, label=None):
+    if file_type == FileType.video:
+        file_path = filedialog.askopenfilename(
+            filetypes=[("video file", ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv")])
+    elif file_type == FileType.model:
+        file_path = filedialog.askopenfilename(
+            filetypes=[("model file", ".pt")])
+    else:
+        file_path = ''
+
+    # print("file_path = {}".format(file_path))
 
     if label is not None:
         label['text'] = file_path
 
     return file_path
+
+
+def play_video(video_path):
+    cap = cv2.VideoCapture(video_path)
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        # if frame is read correctly ret is True
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            break
+        cv2.imshow('frame', frame)
+        if cv2.waitKey(1) == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+def is_video(video_path):
+    # TODO: 这个函数有必要吗？
+    cap = cv2.VideoCapture(video_path)
+    result = cap.isOpened()
+    cap.release()
+    return result
 
 
 def choose_classes():
@@ -124,13 +161,10 @@ def init_window():
     file_path_label_weight = 10  # 表示路径标签的宽度横跨多少列
 
     choose_video_text = '选择视频'
-    video_path_text = '视频位置...'
     rotate_video_text = '旋转视频'
-    model_path_text = '模型位置...'
     choose_model_text = '选择模型'
     choose_classes_text = '选择检测类别'
     start_detect_text = '开始检测'
-    progress_text = '显示进度...'
 
     label_relief = 'ridge'
 
@@ -141,11 +175,10 @@ def init_window():
     canvas.grid(row=0, columnspan=file_path_label_weight + 3)
 
     # 第二行，选择视频按钮、视频位置标签、旋转视频按钮
-    choose_video_button, video_path_label = get_choose_file_button_and_label(window)
+    choose_video_button, video_path_label = get_choose_file_button_and_label(window, file_type=FileType.video)
     rotate_video_button = tk.Button(window, text=rotate_video_text, command=rotate_video)
 
     choose_video_button['text'] = choose_video_text
-    video_path_label['text'] = video_path_text
     video_path_label['relief'] = label_relief
     video_path_label['fg'] = 'gray'
     video_path_label['anchor'] = 'w'
@@ -155,11 +188,10 @@ def init_window():
     rotate_video_button.grid(row=1, column=file_path_label_weight + 1, sticky='we')
 
     # 第三行，选择模型按钮、模型位置标签、选择检测类别按钮
-    choose_model_button, model_path_label = get_choose_file_button_and_label(window)
+    choose_model_button, model_path_label = get_choose_file_button_and_label(window, file_type=FileType.model)
     choose_classes_button = tk.Button(window, text=choose_classes_text)  # TODO: command
 
     choose_model_button['text'] = choose_model_text
-    model_path_label['text'] = model_path_text
     model_path_label['relief'] = label_relief
     model_path_label['fg'] = 'gray'
     model_path_label['anchor'] = 'w'
@@ -173,7 +205,7 @@ def init_window():
     start_detect_button.grid(row=1, column=2 + file_path_label_weight, rowspan=2, sticky='wens')
 
     # 第四行，进度标签
-    process_label = tk.Label(window, fg='gray', text=progress_text, anchor='w', relief=label_relief)
+    process_label = tk.Label(window, fg='gray', anchor='w')
     process_label.grid(row=3, columnspan=3 + file_path_label_weight, sticky='we')
 
     window.mainloop()
