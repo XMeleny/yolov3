@@ -9,7 +9,11 @@ def get_max_window():
     res_window = tk.Tk()
     res_window.title("my window")
     w, h = res_window.maxsize()
-    res_window.configure(width=w, height=h)
+
+    res_window.geometry("{}x{}".format(w, h))
+    res_window.update()
+    # res_window.configure(width=w, height=h)
+
     # print(w, h)
     # print(res_window.winfo_width())
     # print(res_window.winfo_reqwidth())
@@ -105,7 +109,15 @@ def init_window():
     # TODO: 用变量把text们都存起来
     window = get_max_window()
 
-    canvas = tk.Canvas(window, bg='green', width=window.winfo_reqwidth(), height=400)  # TODO: height
+    choose_file_weight = 1
+    file_path_label_weight = 4
+    function_button_weight = 1
+    detect_button_weight = 1
+    all_weitght = choose_file_weight + file_path_label_weight + function_button_weight + detect_button_weight
+
+    canvas = tk.Canvas(window, bg='green',
+                       width=window.winfo_width(),
+                       height=window.winfo_height() - 200)
     canvas.grid(row=0, columnspan=4)
 
     choose_video_button, video_path_label = get_choose_file_button_and_label(window)
