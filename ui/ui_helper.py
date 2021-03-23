@@ -185,7 +185,6 @@ def play_video(video_path):
 
 
 def is_video(video_path):
-    # TODO: 这个函数有必要吗？
     cap = cv2.VideoCapture(video_path)
     result = cap.isOpened()
     cap.release()
@@ -246,6 +245,7 @@ def init_window():
     video_path_label['relief'] = label_relief
     video_path_label['fg'] = 'gray'
     video_path_label['anchor'] = 'w'
+    rotate_video_button['state'] = tk.DISABLED
 
     choose_video_button.grid(row=1, column=0, sticky='we')
     video_path_label.grid(row=1, column=1, columnspan=file_path_label_weight, sticky='we')
@@ -259,6 +259,7 @@ def init_window():
     model_path_label['relief'] = label_relief
     model_path_label['fg'] = 'gray'
     model_path_label['anchor'] = 'w'
+    choose_classes_button['state'] = tk.DISABLED
 
     choose_model_button.grid(row=2, column=0, sticky='we')
     model_path_label.grid(row=2, column=1, columnspan=file_path_label_weight, sticky='we')
