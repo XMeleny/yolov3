@@ -5,6 +5,13 @@ from tkinter import filedialog
 import os
 from enum import Enum
 
+'''
+# TODO: extract some global variable
+like:
+    video_path
+    model_path
+'''
+
 
 def get_max_window():
     res_window = tk.Tk()
@@ -76,15 +83,19 @@ def get_choose_video_button_and_label(window, canvas):
 # 每种按钮还是有必要分开来写的
 def choose_video_click(canvas, label):
     video_type = ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv"
-    video_path = filedialog.askopenfilename(filetypes=[("video file", video_type)])
-    # FIXME: 只支持这几种，有没有必要更多呢 or 判断选择的文件是否视频
-    frame = get_first_frame(video_path)
+    video_path = filedialog.askopenfilename(
+        filetypes=[("video file", video_type)])  # FIXME: 只支持这几种，有没有必要更多呢 or 判断选择的文件是否视频
 
+    # update canvas
+    frame = get_first_frame(video_path)
     show_image_auto_resize(canvas, frame)
+
+    # update label
     label['text'] = video_path
 
-    # TODO: update start_detect_button status
-    # TODO: update rotate_button status
+    update_rotate_button_status(video_path)
+
+    update_start_detect_button_status()
 
 
 def get_first_frame(video_path):
@@ -98,10 +109,24 @@ def get_first_frame(video_path):
 
 
 def update_start_detect_button_status():
+    """
+        if video is not empty and model is not empty, then enable
+    """
     pass
 
 
-def update_rotate_button_status():
+def update_choose_classes_button_status():
+    """
+    if model is not empty
+    """
+    pass
+
+
+def update_rotate_button_status(video_path):
+    """
+    if video path is not empty and video is really video
+    :return:
+    """
     pass
 
 
@@ -110,7 +135,7 @@ def rotate_image():
     pass
 
 
-def rotate_video():
+def rotate_video(video_path, degree):
     # 获取旋转角度
     pass
 
@@ -195,7 +220,7 @@ def init_window():
     # TODO: 修改颜色
     # TODO: 按钮可用状态转换
     window = get_max_window()
-    window.update()
+    window.update()  # 使长宽正常获取
 
     file_path_label_weight = 10  # 表示路径标签的宽度横跨多少列
 
@@ -247,6 +272,7 @@ def init_window():
     process_label = tk.Label(window, fg='gray', anchor='w')
     process_label.grid(row=3, columnspan=3 + file_path_label_weight, sticky='we')
 
+    # 窗口开始主循环
     window.mainloop()
 
 

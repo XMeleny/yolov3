@@ -167,4 +167,5 @@ def get_names(weights):
 
 
 if __name__ == '__main__':
-    func_detect(classes=[1])
+    func_detect(classes=[1],
+                source=r"C:\Users\Meleny\Desktop\m'file\compulsory courses\GraduationProject\dataset\video\test.mp4")
