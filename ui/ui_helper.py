@@ -2,169 +2,243 @@ from PIL import ImageTk, Image
 import cv2
 import tkinter as tk
 from tkinter import filedialog
-import os
-from enum import Enum
-
-'''
-# TODO: extract some global variable
-like:
-    video_path
-    model_path
-'''
 
 
-def get_max_window():
-    res_window = tk.Tk()
-    res_window.title("my window")
-    w, h = res_window.maxsize()
+class Window:
+    # ui
+    window = None
 
-    res_window.geometry("{}x{}".format(w, h))
-    # res_window.configure(width=w, height=h)
+    canvas = None
 
-    # res_window.update()
-    # print(w, h)
-    # print(res_window.winfo_width())
-    # print(res_window.winfo_reqwidth())
-    # print(res_window.winfo_vrootwidth())
-    # print(res_window.winfo_screenmmwidth())
-    # print(res_window.winfo_screenwidth())
-    return res_window
+    btn_choose_video = None
+    label_video_path = None
+    btn_rotate_video = None
 
+    btn_choose_model = None
+    label_model_path = None
+    btn_choose_classes = None
 
-def show_image_auto_resize(canvas, cv_image):
-    # 获取canvas和图片的尺寸
-    canvas_width = canvas.winfo_reqwidth()
-    canvas_height = canvas.winfo_reqheight()
+    btn_start_detect = None
 
-    shape = cv_image.shape
-    pic_width = shape[1]
-    pic_height = shape[0]
+    label_process = None
 
-    canvas_ratio = canvas_width / canvas_height
-    pic_ratio = pic_width / pic_height
+    # ui pattern
+    LABEL_RELIEF = tk.RIDGE
+    LABEL_FOREGROUND = 'gray'
+    LABEL_ANCHOR = tk.W
+    FILE_PATH_LABEL_WEIGHT = 10  # 表示路径标签的宽度横跨多少列
 
-    # 尺寸自适应
-    if pic_ratio > canvas_ratio:
-        w = canvas_width
-        h = canvas_width / pic_ratio
-    elif pic_ratio < canvas_ratio:
-        h = canvas_height
-        w = canvas_height * pic_ratio
-    else:
-        w = canvas_width
-        h = canvas_height
+    # data
+    TEXT_CHOOSE_VIDEO = '选择视频'
+    TEXT_ROTATE_VIDEO = '旋转视频'
+    TEXT_CHOOSE_MODEL = '选择模型'
+    TEXT_CHOOSE_CLASSES = '选择检测类别'
+    TEXT_START_DETECT = '开始检测'
 
-    result_cv_image = cv2.resize(cv_image, (int(w), int(h)))
+    TEXT_VIDEO_FILE_TYPE = "视频文件"
+    TEXT_MODEL_FILE_TYPE = "模型文件"
 
-    # canvas显示opencv格式的图片
-    global tk_img  # 必须保持对图片的引用
-    tk_img = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(result_cv_image, cv2.COLOR_BGR2RGB)))
+    TEXT_TEST = "testing..."
 
-    center_x = int(canvas_width / 2)
-    center_y = int(canvas_height / 2)
-    canvas.create_image(center_x, center_y, image=tk_img)
+    VIDEO_TYPE = ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv"
+    MODEL_TYPE = ".pt"
 
+    first_frame = None
+    rotate_degree = 0
+    video_path = ""
+    model_path = ""
+    is_video = False
 
-def get_choose_file_button_and_label(window, file_type):
-    label = tk.Label(window)
-    button = tk.Button(window,
-                       command=lambda: choose_file(file_type=file_type,
-                                                   label=label)
-                       )
-    return button, label
+    def __init__(self):
+        self.init_ui()
 
+    def init_ui(self):
+        self.window = Window.get_max_window()
+        self.window.update()
 
-def get_choose_video_button_and_label(window, canvas):
-    label = tk.Label(window)
-    button = tk.Button(window, command=lambda: choose_video_click(canvas, label))
-    return button, label
+        self.create_widgets()
+        self.layout()
+        self.bind_ui_data()
 
+        self.init_button_state()
+        self.bind_ui_function()
 
-# 每种按钮还是有必要分开来写的
-def choose_video_click(canvas, label):
-    video_type = ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv"
-    video_path = filedialog.askopenfilename(
-        filetypes=[("video file", video_type)])  # FIXME: 只支持这几种，有没有必要更多呢 or 判断选择的文件是否视频
+        # mainloop
+        self.window.mainloop()
 
-    # update canvas
-    frame = get_first_frame(video_path)
-    show_image_auto_resize(canvas, frame)
+    def create_widgets(self):
+        w = self.window.winfo_width()
+        h = self.window.winfo_height()
+        self.canvas = tk.Canvas(self.window, width=w, height=h - 200)
 
-    # update label
-    label['text'] = video_path
+        self.btn_choose_video = tk.Button(self.window)
+        self.label_video_path = tk.Label(self.window)
+        self.btn_rotate_video = tk.Button(self.window)
 
-    update_rotate_button_status(video_path)
+        self.btn_choose_model = tk.Button(self.window)
+        self.label_model_path = tk.Label(self.window)
+        self.btn_choose_classes = tk.Button(self.window)
 
-    update_start_detect_button_status()
+        self.btn_start_detect = tk.Button(self.window)
 
+        self.label_process = tk.Label(self.window)
 
-def get_first_frame(video_path):
-    video_capture = cv2.VideoCapture(video_path)
-    success, frame = video_capture.read()
-    video_capture.release()
-    if success:
-        return frame
-    else:
-        return None
+    def layout(self):
+        self.canvas.grid(row=0, columnspan=self.FILE_PATH_LABEL_WEIGHT + 3)
 
+        self.btn_choose_video.grid(row=1, column=0, sticky='we')
+        self.label_video_path.grid(row=1, column=1, columnspan=self.FILE_PATH_LABEL_WEIGHT, sticky='we')
+        self.btn_rotate_video.grid(row=1, column=self.FILE_PATH_LABEL_WEIGHT + 1, sticky='we')
 
-def update_start_detect_button_status():
-    """
-        if video is not empty and model is not empty, then enable
-    """
-    pass
+        self.btn_choose_model.grid(row=2, column=0, sticky='we')
+        self.label_model_path.grid(row=2, column=1, columnspan=self.FILE_PATH_LABEL_WEIGHT, sticky='we')
+        self.btn_choose_classes.grid(row=2, column=self.FILE_PATH_LABEL_WEIGHT + 1, sticky='we')
 
+        self.btn_start_detect.grid(row=1, rowspan=2, column=self.FILE_PATH_LABEL_WEIGHT + 2, sticky='wens')
 
-def update_choose_classes_button_status():
-    """
-    if model is not empty
-    """
-    pass
+        self.label_process.grid(row=3, columnspan=self.FILE_PATH_LABEL_WEIGHT + 3, sticky='we')
 
+    def bind_ui_data(self):
+        self.btn_choose_video['text'] = self.TEXT_CHOOSE_VIDEO
+        self.btn_rotate_video['text'] = self.TEXT_ROTATE_VIDEO
+        self.btn_choose_model['text'] = self.TEXT_CHOOSE_MODEL
+        self.btn_choose_classes['text'] = self.TEXT_CHOOSE_CLASSES
+        self.btn_start_detect['text'] = self.TEXT_START_DETECT
 
-def update_rotate_button_status(video_path):
-    """
-    if video path is not empty and video is really video
-    :return:
-    """
-    pass
+        self.label_video_path['relief'] = self.LABEL_RELIEF
+        self.label_model_path['relief'] = self.LABEL_RELIEF
 
+        self.label_video_path['fg'] = self.LABEL_FOREGROUND
+        self.label_model_path['fg'] = self.LABEL_FOREGROUND
+        self.label_process['fg'] = self.LABEL_FOREGROUND
 
-def rotate_image():
-    # 可以用个hash map把4个角度的图片存下来，避免多次计算。
-    pass
+        self.label_video_path['anchor'] = self.LABEL_ANCHOR
+        self.label_model_path['anchor'] = self.LABEL_ANCHOR
+        self.label_process['anchor'] = self.LABEL_ANCHOR
 
+    def init_button_state(self):
+        self.btn_rotate_video['state'] = tk.DISABLED
+        self.btn_choose_classes['state'] = tk.DISABLED
+        self.btn_start_detect['state'] = tk.DISABLED
 
-def rotate_video(video_path, degree):
-    # 获取旋转角度
-    pass
+    def bind_ui_function(self):
+        self.btn_choose_video['command'] = lambda: self.choose_video_clicked()
+        self.btn_choose_model['command'] = lambda: self.choose_model_clicked()
+        self.btn_rotate_video['command'] = lambda: self.rotate_video_clicked()
+        self.btn_choose_classes['command'] = lambda: self.choose_classes_clicked()
+        self.btn_start_detect['command'] = lambda: self.start_detect_clicked()
 
+    @classmethod
+    def get_max_window(cls):
+        res_window = tk.Tk()
+        res_window.title("my window")
 
-def start_detect():
-    pass
+        w, h = res_window.maxsize()
+        res_window.geometry("{}x{}".format(w, h))
 
+        return res_window
 
-class FileType(Enum):
-    video = 1
-    model = 2
+    @classmethod
+    def print_winfo(cls, widget):
+        print(f'widget.winfo_width = {widget.winfo_width()}')
+        print(f'widget.winfo_reqwidth = {widget.winfo_reqwidth()}')
+        print(f'widget.winfo_vrootwidth = {widget.winfo_vrootwidth()}')
+        print(f'widget.winfo_screenmmwidth = {widget.winfo_screenmmwidth()}')
+        print(f'widget.winfo_screenwidth = {widget.winfo_screenwidth()}')
 
+    def choose_video_clicked(self):
+        self.update_video_path()
+        self.update_label_video_path()
+        self.update_is_video()
+        self.update_first_frame()
+        self.update_canvas_frame_auto_resize()
+        self.update_btn_rotate_video_state()
 
-def choose_file(file_type, label=None):
-    if file_type == FileType.video:
-        file_path = filedialog.askopenfilename(
-            filetypes=[("video file", ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv")])  # FIXME: 只支持这几种，有没有必要更多呢
-    elif file_type == FileType.model:
-        file_path = filedialog.askopenfilename(
-            filetypes=[("model file", ".pt")])
-    else:
-        file_path = ''
+    def rotate_video_clicked(self):
+        print("rotate_video_clicked")
 
-    # print("file_path = {}".format(file_path))
+    def choose_model_clicked(self):
+        print("choose_model_clicked")
 
-    if label is not None:
-        label['text'] = file_path
+    def choose_classes_clicked(self):
+        print("choose_classes_clicked")
 
-    return file_path
+    def start_detect_clicked(self):
+        print("start_detect_clicked")
+
+    def update_video_path(self):
+        self.video_path = filedialog.askopenfilename(filetypes=[(self.TEXT_VIDEO_FILE_TYPE, self.VIDEO_TYPE)])
+
+    def update_label_video_path(self):
+        self.label_video_path['text'] = self.video_path
+
+    def update_is_video(self):
+        if len(self.video_path) <= 0:
+            self.is_video = False
+            return
+
+        cap = cv2.VideoCapture(self.video_path)
+        self.is_video = cap.isOpened()
+        cap.release()
+
+    def update_first_frame(self):
+        if len(self.video_path) <= 0 or not self.is_video:
+            self.first_frame = None
+            return
+
+        video_capture = cv2.VideoCapture(self.video_path)
+        success, frame = video_capture.read()
+        video_capture.release()
+        if success:
+            self.first_frame = frame
+        else:
+            self.first_frame = None
+
+    def update_canvas_frame_auto_resize(self):
+        if self.first_frame is None:
+            self.canvas.delete("all")
+            return
+
+        canvas_width = self.canvas.winfo_reqwidth()
+        canvas_height = self.canvas.winfo_reqheight()
+
+        shape = self.first_frame.shape
+        pic_width = shape[1]
+        pic_height = shape[0]
+
+        canvas_ratio = canvas_width / canvas_height
+        pic_ratio = pic_width / pic_height
+
+        # 尺寸自适应
+        if pic_ratio > canvas_ratio:
+            w = canvas_width
+            h = canvas_width / pic_ratio
+        elif pic_ratio < canvas_ratio:
+            h = canvas_height
+            w = canvas_height * pic_ratio
+        else:
+            w = canvas_width
+            h = canvas_height
+
+        result_cv_image = cv2.resize(self.first_frame, (int(w), int(h)))
+
+        # canvas显示opencv格式的图片
+        global tk_img  # 必须保持对图片的引用
+        tk_img = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(result_cv_image, cv2.COLOR_BGR2RGB)))
+
+        center_x = int(canvas_width / 2)
+        center_y = int(canvas_height / 2)
+        self.canvas.create_image(center_x, center_y, image=tk_img)
+
+    def update_btn_rotate_video_state(self):
+        if self.is_video:
+            self.btn_rotate_video['state'] = tk.NORMAL
+        else:
+            self.btn_rotate_video['state'] = tk.DISABLED
+
+    def update_btn_start_detect_state(self):
+        # is video and is model, enable
+        pass
 
 
 def play_video(video_path):
@@ -184,98 +258,5 @@ def play_video(video_path):
     cv2.destroyAllWindows()
 
 
-def is_video(video_path):
-    cap = cv2.VideoCapture(video_path)
-    result = cap.isOpened()
-    cap.release()
-    return result
-
-
-def choose_classes():
-    pass
-
-
-def split_url(url):
-    (_dir, file) = os.path.split(url)
-    temp = file.split('.')
-    filename = temp[0]
-    ext = temp[1]
-    result = {'dir': _dir, 'filename': filename, 'ext': ext}
-    print(result)
-    return result
-
-
-def log():
-    """保存log文件"""
-    pass
-
-
-def update_process():
-    pass
-
-
-def init_window():
-    # TODO: 用变量把text们都存起来
-    # TODO: 修改颜色
-    # TODO: 按钮可用状态转换
-    window = get_max_window()
-    window.update()  # 使长宽正常获取
-
-    file_path_label_weight = 10  # 表示路径标签的宽度横跨多少列
-
-    choose_video_text = '选择视频'
-    rotate_video_text = '旋转视频'
-    choose_model_text = '选择模型'
-    choose_classes_text = '选择检测类别'
-    start_detect_text = '开始检测'
-
-    label_relief = 'ridge'
-
-    # 第一行，视频第一帧显示
-    canvas = tk.Canvas(window, bg='green',
-                       width=window.winfo_width(),
-                       height=window.winfo_height() - 200)
-    canvas.grid(row=0, columnspan=file_path_label_weight + 3)
-
-    # 第二行，选择视频按钮、视频位置标签、旋转视频按钮
-    choose_video_button, video_path_label = get_choose_video_button_and_label(window, canvas)
-    rotate_video_button = tk.Button(window, text=rotate_video_text, command=rotate_video)
-
-    choose_video_button['text'] = choose_video_text
-    video_path_label['relief'] = label_relief
-    video_path_label['fg'] = 'gray'
-    video_path_label['anchor'] = 'w'
-    rotate_video_button['state'] = tk.DISABLED
-
-    choose_video_button.grid(row=1, column=0, sticky='we')
-    video_path_label.grid(row=1, column=1, columnspan=file_path_label_weight, sticky='we')
-    rotate_video_button.grid(row=1, column=file_path_label_weight + 1, sticky='we')
-
-    # 第三行，选择模型按钮、模型位置标签、选择检测类别按钮
-    choose_model_button, model_path_label = get_choose_file_button_and_label(window, file_type=FileType.model)
-    choose_classes_button = tk.Button(window, text=choose_classes_text)  # TODO: command
-
-    choose_model_button['text'] = choose_model_text
-    model_path_label['relief'] = label_relief
-    model_path_label['fg'] = 'gray'
-    model_path_label['anchor'] = 'w'
-    choose_classes_button['state'] = tk.DISABLED
-
-    choose_model_button.grid(row=2, column=0, sticky='we')
-    model_path_label.grid(row=2, column=1, columnspan=file_path_label_weight, sticky='we')
-    choose_classes_button.grid(row=2, column=file_path_label_weight + 1, sticky='we')
-
-    # 跨二三行，检测按钮
-    start_detect_button = tk.Button(window, text=start_detect_text)  # TODO: command
-    start_detect_button.grid(row=1, column=2 + file_path_label_weight, rowspan=2, sticky='wens')
-
-    # 第四行，进度标签
-    process_label = tk.Label(window, fg='gray', anchor='w')
-    process_label.grid(row=3, columnspan=3 + file_path_label_weight, sticky='we')
-
-    # 窗口开始主循环
-    window.mainloop()
-
-
 if __name__ == '__main__':
-    init_window()
+    window = Window()
