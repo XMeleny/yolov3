@@ -2,6 +2,7 @@ from PIL import ImageTk, Image
 import cv2
 import tkinter as tk
 from tkinter import filedialog
+import numpy as np
 
 
 class Window:
@@ -63,7 +64,6 @@ class Window:
         self.init_button_state()
         self.bind_ui_function()
 
-        # mainloop
         self.window.mainloop()
 
     def create_widgets(self):
@@ -149,13 +149,18 @@ class Window:
     def choose_video_clicked(self):
         self.update_video_path()
         self.update_label_video_path()
+
         self.update_is_video()
         self.update_first_frame()
         self.update_canvas_frame_auto_resize()
+
         self.update_btn_rotate_video_state()
+        self.update_btn_start_detect_state()
+
+        self.update_degree()
 
     def rotate_video_clicked(self):
-        print("rotate_video_clicked")
+        self.rotate_first_frame()
 
     def choose_model_clicked(self):
         print("choose_model_clicked")
@@ -180,6 +185,9 @@ class Window:
         cap = cv2.VideoCapture(self.video_path)
         self.is_video = cap.isOpened()
         cap.release()
+
+    def update_degree(self):
+        self.rotate_degree = 0
 
     def update_first_frame(self):
         if len(self.video_path) <= 0 or not self.is_video:
@@ -230,6 +238,46 @@ class Window:
         center_y = int(canvas_height / 2)
         self.canvas.create_image(center_x, center_y, image=tk_img)
 
+    def rotate_first_frame(self):
+        if self.first_frame is None:
+            return
+
+        self.rotate_degree = (self.rotate_degree + 90) % 360
+        self.first_frame = self.rotate_frame(self.first_frame)
+        self.update_canvas_frame_auto_resize()
+
+    # FIXME: static method 是什么鬼啦。。。
+    @staticmethod
+    def rotate_frame(frame):
+        # 只支持90度旋转
+        if frame is None:
+            return None
+        else:
+            h, w = frame.shape[:2]
+            (cx, cy) = (w / 2, h / 2)
+
+            # 设置旋转矩阵
+            matrix = cv2.getRotationMatrix2D((cx, cy), -90, scale=1.0)  # FIXME: -90 和 90 有什么区别呢？有什么影响吗？
+            cos = np.abs(matrix[0, 0])
+            sin = np.abs(matrix[0, 1])
+
+            # 计算图像旋转后的新边界
+            nW = int((h * sin) + (w * cos))
+            nH = int((h * cos) + (w * sin))
+
+            # 调整旋转矩阵的移动距离（t_{x}, t_{y}）
+            matrix[0, 2] += (nW / 2) - cx
+            matrix[1, 2] += (nH / 2) - cy
+
+            frame = cv2.warpAffine(frame.copy(), matrix, (nW, nH))
+            return frame
+
+    def rotate_video(self):
+        pass
+
+    def get_des_video_path(self):
+        pass
+
     def update_btn_rotate_video_state(self):
         if self.is_video:
             self.btn_rotate_video['state'] = tk.NORMAL
@@ -238,6 +286,9 @@ class Window:
 
     def update_btn_start_detect_state(self):
         # is video and is model, enable
+        pass
+
+    def log(self):
         pass
 
 
