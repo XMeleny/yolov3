@@ -67,6 +67,44 @@ def get_choose_file_button_and_label(window, file_type):
     return button, label
 
 
+def get_choose_video_button_and_label(window, canvas):
+    label = tk.Label(window)
+    button = tk.Button(window, command=lambda: choose_video_click(canvas, label))
+    return button, label
+
+
+# 每种按钮还是有必要分开来写的
+def choose_video_click(canvas, label):
+    video_type = ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv"
+    video_path = filedialog.askopenfilename(filetypes=[("video file", video_type)])
+    # FIXME: 只支持这几种，有没有必要更多呢 or 判断选择的文件是否视频
+    frame = get_first_frame(video_path)
+
+    show_image_auto_resize(canvas, frame)
+    label['text'] = video_path
+
+    # TODO: update start_detect_button status
+    # TODO: update rotate_button status
+
+
+def get_first_frame(video_path):
+    video_capture = cv2.VideoCapture(video_path)
+    success, frame = video_capture.read()
+    video_capture.release()
+    if success:
+        return frame
+    else:
+        return None
+
+
+def update_start_detect_button_status():
+    pass
+
+
+def update_rotate_button_status():
+    pass
+
+
 def rotate_image():
     # 可以用个hash map把4个角度的图片存下来，避免多次计算。
     pass
@@ -176,7 +214,7 @@ def init_window():
     canvas.grid(row=0, columnspan=file_path_label_weight + 3)
 
     # 第二行，选择视频按钮、视频位置标签、旋转视频按钮
-    choose_video_button, video_path_label = get_choose_file_button_and_label(window, file_type=FileType.video)
+    choose_video_button, video_path_label = get_choose_video_button_and_label(window, canvas)
     rotate_video_button = tk.Button(window, text=rotate_video_text, command=rotate_video)
 
     choose_video_button['text'] = choose_video_text
