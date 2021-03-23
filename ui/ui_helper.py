@@ -3,6 +3,7 @@ import cv2
 import tkinter as tk
 from tkinter import filedialog
 import numpy as np
+import os
 
 
 class Window:
@@ -49,6 +50,7 @@ class Window:
     video_path = ""
     model_path = ""
     is_video = False
+    classes = []
 
     def __init__(self):
         self.init_ui()
@@ -119,7 +121,7 @@ class Window:
     def init_button_state(self):
         self.btn_rotate_video['state'] = tk.DISABLED
         self.btn_choose_classes['state'] = tk.DISABLED
-        self.btn_start_detect['state'] = tk.DISABLED
+        # self.btn_start_detect['state'] = tk.DISABLED
 
     def bind_ui_function(self):
         self.btn_choose_video['command'] = lambda: self.choose_video_clicked()
@@ -169,7 +171,7 @@ class Window:
         print("choose_classes_clicked")
 
     def start_detect_clicked(self):
-        print("start_detect_clicked")
+        self.rotate_video()
 
     def update_video_path(self):
         self.video_path = filedialog.askopenfilename(filetypes=[(self.TEXT_VIDEO_FILE_TYPE, self.VIDEO_TYPE)])
@@ -243,13 +245,12 @@ class Window:
             return
 
         self.rotate_degree = (self.rotate_degree + 90) % 360
-        self.first_frame = self.rotate_frame(self.first_frame)
+        self.first_frame = self.rotate_frame(self.first_frame, 90)
         self.update_canvas_frame_auto_resize()
 
     # FIXME: static method 是什么鬼啦。。。
     @staticmethod
-    def rotate_frame(frame):
-        # 只支持90度旋转
+    def rotate_frame(frame, degree):
         if frame is None:
             return None
         else:
@@ -257,7 +258,7 @@ class Window:
             (cx, cy) = (w / 2, h / 2)
 
             # 设置旋转矩阵
-            matrix = cv2.getRotationMatrix2D((cx, cy), -90, scale=1.0)  # FIXME: -90 和 90 有什么区别呢？有什么影响吗？
+            matrix = cv2.getRotationMatrix2D((cx, cy), -degree, scale=1.0)  # FIXME: -degree 和 degree有什么区别吗？
             cos = np.abs(matrix[0, 0])
             sin = np.abs(matrix[0, 1])
 
@@ -273,10 +274,66 @@ class Window:
             return frame
 
     def rotate_video(self):
-        pass
+        # FIXME: 有一些奇怪的错误输出
+        # TODO: show progress
+        if self.rotate_degree == 0:
+            return
 
-    def get_des_video_path(self):
-        pass
+        src_video = cv2.VideoCapture(self.video_path)
+        fourcc = int(src_video.get(cv2.CAP_PROP_FOURCC))
+        fps = src_video.get(cv2.CAP_PROP_FPS)
+        w = int(src_video.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(src_video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        if self.rotate_degree % 180 == 0:
+            size = (w, h)
+        else:
+            size = (h, w)
+
+        video_writer = cv2.VideoWriter(self.get_rotated_video_path(), fourcc, fps, size)
+
+        read_status, video_frame = src_video.read()
+        while read_status:
+            video_frame = Window.rotate_frame(video_frame, self.rotate_degree)
+            video_writer.write(video_frame)
+            read_status, video_frame = src_video.read()
+
+        src_video.release()
+        video_writer.release()
+
+    @staticmethod
+    def split_url(url):
+        (_dir, file) = os.path.split(url)
+        temp = file.split('.')
+        filename = temp[0]
+        ext = temp[1]
+        return {'dir': _dir, 'filename': filename, 'ext': ext}
+
+    @staticmethod
+    def get_des_file_path(src_url, prefix='', suffix='', ext=''):
+        split_result = Window.split_url(src_url)
+
+        # 添加前后缀
+        filename = split_result['filename']
+        if len(prefix) > 0:
+            filename = prefix + "_" + filename
+        if len(suffix) > 0:
+            filename = filename + "_" + suffix
+
+        # 添加文件格式
+        if len(ext) == 0:
+            filename = filename + "." + split_result['ext']
+        else:
+            filename = filename + "." + ext
+
+        des_url = os.path.join(split_result['dir'], filename)
+        # print(f'des_url = {des_url}')
+        return des_url
+
+    def get_rotated_video_path(self):
+        if self.rotate_degree == 0:
+            return self.video_path
+        return Window.get_des_file_path(self.video_path, suffix=f'rotated_{self.rotate_degree}')
 
     def update_btn_rotate_video_state(self):
         if self.is_video:
