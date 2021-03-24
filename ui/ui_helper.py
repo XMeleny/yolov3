@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 from PIL import ImageTk, Image
 
+from models.experimental import attempt_load
+
 
 class Window:
     # ui
@@ -51,7 +53,8 @@ class Window:
     video_path = ""
     model_path = ""
     is_video = False
-    classes = []
+    all_classes = []
+    chosen_classes = []
 
     def __init__(self):
         self.init_ui()
@@ -120,8 +123,9 @@ class Window:
         self.label_process['anchor'] = self.LABEL_ANCHOR
 
     def init_button_state(self):
+        # FIXME: 应该全部设为 disable， 只是为了测试而注释
         self.btn_rotate_video['state'] = tk.DISABLED
-        self.btn_choose_classes['state'] = tk.DISABLED
+        # self.btn_choose_classes['state'] = tk.DISABLED
         self.btn_start_detect['state'] = tk.DISABLED
 
     def bind_ui_function(self):
@@ -166,13 +170,36 @@ class Window:
         self.rotate_first_frame()
 
     def choose_model_clicked(self):
-        print("choose_model_clicked")
-        # TODO: classes = get_all_classes(model)
+        self.model_path = filedialog.askopenfilename(filetypes=[(self.TEXT_MODEL_FILE_TYPE, self.MODEL_TYPE)])
+        self.label_model_path['text'] = self.model_path
+
+        # get classes
+        if len(self.model_path) > 0:
+            model = attempt_load(self.model_path)
+            self.all_classes = model.module.names if hasattr(model, 'module') else model.names
+            print(f"all_classes = {self.all_classes}")
+        else:
+            self.all_classes = []
+
+        # 默认全选
+        self.chosen_classes = self.all_classes
+
+        if len(self.all_classes) > 0:
+            self.btn_choose_classes['state'] = tk.NORMAL
+
         # TODO: update start_detect state
 
+        # TODO: progress
+
     def choose_classes_clicked(self):
-        print("choose_classes_clicked")
+        # TODO: 焦点控制。如何将焦点控制在新打开的窗口，在新窗口打开的时候不允许点击主窗口？
+
         # TODO: get classes and show, and refresh the chosen classes
+        new_window = tk.Toplevel(self.window)
+        new_window.title('choose classes to detect')
+
+        # TODO: add widgets
+        new_window.mainloop()
 
     def start_detect_clicked(self):
         self.rotate_video()
@@ -210,6 +237,7 @@ class Window:
             self.canvas.delete("all")
             return
 
+        # FIXME: 尝试 window.update() 看获取 winfo_width 是否正常
         canvas_width = self.canvas.winfo_reqwidth()
         canvas_height = self.canvas.winfo_reqheight()
 
