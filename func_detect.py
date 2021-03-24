@@ -25,6 +25,7 @@ def real_detect(weights_, source_, img_size_,
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://'))
 
+    # TODO: change save_dir and save_file_name
     # Directories
     save_dir = Path(increment_path(Path(project_) / name_, exist_ok=exist_ok_))  # increment run
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
@@ -116,9 +117,10 @@ def real_detect(weights_, source_, img_size_,
                         label = f'{names[int(cls)]} {conf:.2f}'
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
-                        # xmer: 在下面可以print，也就可以alarm
-                        if int(cls) in classes_:
-                            print(f"xm: detected {names[int(cls)]}")
+                        # TODO: print custom information, remind that classes_ may be None
+                        # # xmer: 在下面可以print，也就可以alarm
+                        # if int(cls) in classes_:
+                        #     print(f"xm: detected {names[int(cls)]}")
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')

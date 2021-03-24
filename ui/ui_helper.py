@@ -8,6 +8,8 @@ from PIL import ImageTk, Image
 
 from models.experimental import attempt_load
 
+import func_detect
+
 
 class Window:
     # ui
@@ -267,6 +269,10 @@ class Window:
 
     def start_detect_clicked(self):
         self.rotate_video()
+        func_detect.func_detect(weights=self.model_path,
+                                source=self.get_rotated_video_path(),
+                                classes=self.get_chosen_classes_list())
+        # TODO: show progress
 
     def update_video_path(self):
         self.video_path = filedialog.askopenfilename(filetypes=[(self.TEXT_VIDEO_FILE_TYPE, self.VIDEO_TYPE)])
