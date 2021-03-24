@@ -14,6 +14,8 @@ from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 
 
+# TODO: rename to helper.py
+
 def real_detect(weights_, source_, img_size_,
                 conf_thres_, iou_thres_, device_,
                 view_img_, save_txt_, save_conf_,

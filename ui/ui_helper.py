@@ -53,8 +53,8 @@ class Window:
     video_path = ""
     model_path = ""
     is_video = False
-    all_classes = []
-    chosen_classes = []
+    list_all_classes = []
+    set_chosen_classes = {}
 
     def __init__(self):
         self.init_ui()
@@ -123,9 +123,8 @@ class Window:
         self.label_process['anchor'] = self.LABEL_ANCHOR
 
     def init_button_state(self):
-        # FIXME: 应该全部设为 disable， 只是为了测试而注释
         self.btn_rotate_video['state'] = tk.DISABLED
-        # self.btn_choose_classes['state'] = tk.DISABLED
+        self.btn_choose_classes['state'] = tk.DISABLED
         self.btn_start_detect['state'] = tk.DISABLED
 
     def bind_ui_function(self):
@@ -173,34 +172,42 @@ class Window:
         self.model_path = filedialog.askopenfilename(filetypes=[(self.TEXT_MODEL_FILE_TYPE, self.MODEL_TYPE)])
         self.label_model_path['text'] = self.model_path
 
-        # get classes
-        if len(self.model_path) > 0:
-            model = attempt_load(self.model_path)
-            self.all_classes = model.module.names if hasattr(model, 'module') else model.names
-            print(f"all_classes = {self.all_classes}")
-        else:
-            self.all_classes = []
+        self.setup_classes()
 
-        # 默认全选
-        self.chosen_classes = self.all_classes
-
-        if len(self.all_classes) > 0:
-            self.btn_choose_classes['state'] = tk.NORMAL
-
-        # TODO: update start_detect state
+        self.update_btn_choose_classes_state()
+        self.update_btn_start_detect_state()
 
         # TODO: progress
 
+    def setup_classes(self):
+        # clear
+        self.list_all_classes = []
+
+        # TODO: move this part to func_detect.py
+        # get classes
+        if len(self.model_path) > 0:
+            model = attempt_load(self.model_path)
+            self.list_all_classes = model.module.names if hasattr(model, 'module') else model.names
+
+        # test
+        # for i in range(50):
+        #     self.list_all_classes.append(str(i))
+
+        # print(f"all_classes = {self.all_classes}")
+
+        # 默认全选
+        self.set_chosen_classes.clear()
+        for class_name in self.list_all_classes:
+            self.set_chosen_classes[class_name] = tk.BooleanVar(value=True)
+
     def choose_classes_clicked(self):
         # TODO: 焦点控制。如何将焦点控制在新打开的窗口，在新窗口打开的时候不允许点击主窗口？
+        self.show_choose_window()
 
-        # TODO: get classes and show, and refresh the chosen classes
-        # frame 的用法 https://blog.csdn.net/qq_37431083/article/details/103960673
-        # scrollable frame: https://stackoverflow.com/questions/16188420/tkinter-scrollbar-for-frame
-        new_window = tk.Toplevel(self.window)
-        new_window.title('choose classes to detect')
+    def show_choose_window(self):
+        choose_window = tk.Toplevel(self.window)
+        choose_window.title('choose classes to detect')
 
-        # TODO: add widgets
         canvas_weight = 10
 
         # 修正 canvas_weight 为奇数
@@ -210,34 +217,53 @@ class Window:
         all_weight = canvas_weight + 1
         half_weight = int(all_weight / 2)
 
-        canvas = tk.Canvas(new_window)
+        canvas = tk.Canvas(choose_window)
         canvas.grid(row=0, column=0, columnspan=canvas_weight)
 
-        scrollbar = tk.Scrollbar(new_window, orient=tk.VERTICAL, command=canvas.yview)
+        scrollbar = tk.Scrollbar(choose_window, orient=tk.VERTICAL, command=canvas.yview)
         scrollbar.grid(row=0, column=canvas_weight, sticky='ns')
 
         canvas.configure(yscrollcommand=scrollbar.set)
 
         frame = tk.Frame(canvas)
 
-        # add test data in frame
-        for i in range(50):
-            tk.Label(frame, text=i).grid(row=i, column=0)
-
+        for idx, class_name in enumerate(self.list_all_classes):
+            tk.Checkbutton(frame, text=class_name, variable=self.set_chosen_classes[class_name]).grid(row=idx)
         canvas.create_window((0, 0), window=frame, anchor='nw')
 
         # 要 update 才能正常设置
-        new_window.update()
+        choose_window.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
 
-        btn_select_all = tk.Button(new_window, text="select all")
+        btn_select_all = tk.Button(choose_window, text="select all", command=self.select_all_clicked)
         btn_select_all.grid(row=1, column=0, columnspan=half_weight, sticky='we')
-        btn_deselect_all = tk.Button(new_window, text='deselect all')
+
+        btn_deselect_all = tk.Button(choose_window, text='deselect all', command=self.deselect_all_clicked)
         btn_deselect_all.grid(row=1, column=half_weight, columnspan=half_weight, sticky='we')
 
-        btn_confirm = tk.Button(new_window, text="confirm")
+        btn_confirm = tk.Button(choose_window, text="confirm", command=lambda: self.confirm_clicked(choose_window))
         btn_confirm.grid(row=2, column=0, columnspan=all_weight, sticky='we')
-        new_window.mainloop()
+
+        choose_window.mainloop()
+
+    def select_all_clicked(self):
+        for bool_var in self.set_chosen_classes.values():
+            bool_var.set(True)
+
+    def deselect_all_clicked(self):
+        for bool_var in self.set_chosen_classes.values():
+            bool_var.set(False)
+
+    def confirm_clicked(self, choose_window):
+        print(f'res = {self.get_chosen_classes_list()}')
+        choose_window.destroy()
+
+    def get_chosen_classes_list(self):
+        res = []
+        for key in self.set_chosen_classes:
+            if self.set_chosen_classes[key].get() and key in self.list_all_classes:
+                res.append(self.list_all_classes.index(key))
+        return res
 
     def start_detect_clicked(self):
         self.rotate_video()
@@ -406,9 +432,17 @@ class Window:
         else:
             self.btn_rotate_video['state'] = tk.DISABLED
 
+    def update_btn_choose_classes_state(self):
+        if len(self.list_all_classes) > 0:
+            self.btn_choose_classes['state'] = tk.NORMAL
+        else:
+            self.btn_choose_classes['state'] = tk.DISABLED
+
     def update_btn_start_detect_state(self):
-        # is video and is model, enable
-        pass
+        if self.is_video and len(self.list_all_classes) > 0:
+            self.btn_start_detect['state'] = tk.NORMAL
+        else:
+            self.btn_start_detect['state'] = tk.DISABLED
 
     def log(self):
         pass
