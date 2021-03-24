@@ -1,9 +1,10 @@
-from PIL import ImageTk, Image
-import cv2
+import os
 import tkinter as tk
 from tkinter import filedialog
+
+import cv2
 import numpy as np
-import os
+from PIL import ImageTk, Image
 
 
 class Window:
@@ -121,7 +122,7 @@ class Window:
     def init_button_state(self):
         self.btn_rotate_video['state'] = tk.DISABLED
         self.btn_choose_classes['state'] = tk.DISABLED
-        # self.btn_start_detect['state'] = tk.DISABLED
+        self.btn_start_detect['state'] = tk.DISABLED
 
     def bind_ui_function(self):
         self.btn_choose_video['command'] = lambda: self.choose_video_clicked()
@@ -159,16 +160,19 @@ class Window:
         self.update_btn_rotate_video_state()
         self.update_btn_start_detect_state()
 
-        self.update_degree()
+        self.rotate_degree = 0
 
     def rotate_video_clicked(self):
         self.rotate_first_frame()
 
     def choose_model_clicked(self):
         print("choose_model_clicked")
+        # TODO: classes = get_all_classes(model)
+        # TODO: update start_detect state
 
     def choose_classes_clicked(self):
         print("choose_classes_clicked")
+        # TODO: get classes and show, and refresh the chosen classes
 
     def start_detect_clicked(self):
         self.rotate_video()
@@ -187,9 +191,6 @@ class Window:
         cap = cv2.VideoCapture(self.video_path)
         self.is_video = cap.isOpened()
         cap.release()
-
-    def update_degree(self):
-        self.rotate_degree = 0
 
     def update_first_frame(self):
         if len(self.video_path) <= 0 or not self.is_video:
@@ -248,7 +249,6 @@ class Window:
         self.first_frame = self.rotate_frame(self.first_frame, 90)
         self.update_canvas_frame_auto_resize()
 
-    # FIXME: static method 是什么鬼啦。。。
     @staticmethod
     def rotate_frame(frame, degree):
         if frame is None:
@@ -274,7 +274,6 @@ class Window:
             return frame
 
     def rotate_video(self):
-        # FIXME: 有一些奇怪的错误输出
         # TODO: show progress
         if self.rotate_degree == 0:
             return
