@@ -195,10 +195,48 @@ class Window:
         # TODO: 焦点控制。如何将焦点控制在新打开的窗口，在新窗口打开的时候不允许点击主窗口？
 
         # TODO: get classes and show, and refresh the chosen classes
+        # frame 的用法 https://blog.csdn.net/qq_37431083/article/details/103960673
+        # scrollable frame: https://stackoverflow.com/questions/16188420/tkinter-scrollbar-for-frame
         new_window = tk.Toplevel(self.window)
         new_window.title('choose classes to detect')
 
         # TODO: add widgets
+        canvas_weight = 10
+
+        # 修正 canvas_weight 为奇数
+        if canvas_weight % 2 == 0:
+            canvas_weight += 1
+
+        all_weight = canvas_weight + 1
+        half_weight = int(all_weight / 2)
+
+        canvas = tk.Canvas(new_window)
+        canvas.grid(row=0, column=0, columnspan=canvas_weight)
+
+        scrollbar = tk.Scrollbar(new_window, orient=tk.VERTICAL, command=canvas.yview)
+        scrollbar.grid(row=0, column=canvas_weight, sticky='ns')
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        frame = tk.Frame(canvas)
+
+        # add test data in frame
+        for i in range(50):
+            tk.Label(frame, text=i).grid(row=i, column=0)
+
+        canvas.create_window((0, 0), window=frame, anchor='nw')
+
+        # 要 update 才能正常设置
+        new_window.update()
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+        btn_select_all = tk.Button(new_window, text="select all")
+        btn_select_all.grid(row=1, column=0, columnspan=half_weight, sticky='we')
+        btn_deselect_all = tk.Button(new_window, text='deselect all')
+        btn_deselect_all.grid(row=1, column=half_weight, columnspan=half_weight, sticky='we')
+
+        btn_confirm = tk.Button(new_window, text="confirm")
+        btn_confirm.grid(row=2, column=0, columnspan=all_weight, sticky='we')
         new_window.mainloop()
 
     def start_detect_clicked(self):
