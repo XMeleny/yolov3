@@ -10,6 +10,13 @@ from models.experimental import attempt_load
 
 import func_detect
 
+from _thread import *
+
+
+# TODO: delete test data and test code
+# TODO: 耗时操作打 progress
+# TODO: 打 log
+# TODO: 按钮 enable 和 disable
 
 class Window:
     # ui
@@ -54,9 +61,14 @@ class Window:
     rotate_degree = 0
     video_path = ""
     model_path = ""
-    is_video = False
     list_all_classes = []
     set_chosen_classes = {}
+
+    is_video = False
+    is_model = False
+    getting_model = False
+    rotating = False
+    detecting = False
 
     def __init__(self):
         self.init_ui()
@@ -136,8 +148,8 @@ class Window:
         self.btn_choose_classes['command'] = lambda: self.choose_classes_clicked()
         self.btn_start_detect['command'] = lambda: self.start_detect_clicked()
 
-    @classmethod
-    def get_max_window(cls):
+    @staticmethod
+    def get_max_window():
         res_window = tk.Tk()
         res_window.title("my window")
 
@@ -146,8 +158,8 @@ class Window:
 
         return res_window
 
-    @classmethod
-    def print_winfo(cls, widget):
+    @staticmethod
+    def print_winfo(widget):
         print(f'widget.winfo_width = {widget.winfo_width()}')
         print(f'widget.winfo_reqwidth = {widget.winfo_reqwidth()}')
         print(f'widget.winfo_vrootwidth = {widget.winfo_vrootwidth()}')
@@ -174,23 +186,23 @@ class Window:
         self.model_path = filedialog.askopenfilename(filetypes=[(self.TEXT_MODEL_FILE_TYPE, self.MODEL_TYPE)])
         self.label_model_path['text'] = self.model_path
 
-        self.setup_classes()
-
-        self.update_btn_choose_classes_state()
-        self.update_btn_start_detect_state()
-
-        # TODO: progress
+        try:
+            start_new_thread(self.choose_model, ())  # 获取 all_classes 是耗时操作，需要多线程操作，避免卡死页面
+        except Exception:
+            print(Exception)
+            print("error: unable to start a new thread")
 
     def setup_classes(self):
         # clear
         self.list_all_classes = []
 
         # TODO: move this part to func_detect.py
-        # get classes
+        # get classes, time consuming
+        self.update_progress("开始检测分类...")
         if len(self.model_path) > 0:
             model = attempt_load(self.model_path)
             self.list_all_classes = model.module.names if hasattr(model, 'module') else model.names
-
+        self.update_progress("分类检测完成...")
         # test
         # for i in range(50):
         #     self.list_all_classes.append(str(i))
@@ -201,6 +213,12 @@ class Window:
         self.set_chosen_classes.clear()
         for class_name in self.list_all_classes:
             self.set_chosen_classes[class_name] = tk.BooleanVar(value=True)
+
+    def choose_model(self):
+        self.setup_classes()
+
+        self.update_btn_choose_classes_state()
+        self.update_btn_start_detect_state()
 
     def choose_classes_clicked(self):
         # TODO: 焦点控制。如何将焦点控制在新打开的窗口，在新窗口打开的时候不允许点击主窗口？
@@ -268,11 +286,17 @@ class Window:
         return res
 
     def start_detect_clicked(self):
+        try:
+            start_new_thread(self.start_detect, ())
+        except Exception:
+            print(Exception)
+            print("error: unable to start a new thread")
+
+    def start_detect(self):
         self.rotate_video()
         func_detect.func_detect(weights=self.model_path,
                                 source=self.get_rotated_video_path(),
                                 classes=self.get_chosen_classes_list())
-        # TODO: show progress
 
     def update_video_path(self):
         self.video_path = filedialog.askopenfilename(filetypes=[(self.TEXT_VIDEO_FILE_TYPE, self.VIDEO_TYPE)])
@@ -372,10 +396,10 @@ class Window:
             return frame
 
     def rotate_video(self):
-        # TODO: show progress
         if self.rotate_degree == 0:
             return
 
+        self.update_progress("开始旋转视频...")
         src_video = cv2.VideoCapture(self.video_path)
         fourcc = int(src_video.get(cv2.CAP_PROP_FOURCC))
         fps = src_video.get(cv2.CAP_PROP_FPS)
@@ -397,6 +421,8 @@ class Window:
 
         src_video.release()
         video_writer.release()
+
+        self.update_progress("视频旋转完成...")
 
     @staticmethod
     def split_url(url):
@@ -449,6 +475,9 @@ class Window:
             self.btn_start_detect['state'] = tk.NORMAL
         else:
             self.btn_start_detect['state'] = tk.DISABLED
+
+    def update_progress(self, text):
+        self.label_process['text'] = text
 
     def log(self):
         pass
