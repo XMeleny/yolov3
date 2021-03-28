@@ -13,8 +13,14 @@ from utils.torch_utils import select_device, time_synchronized
 from path_helper import *
 
 
-# TODO: add params 1. alarm 2. log
-def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classes=None):
+# TODO: add function: 1. log, 2. alarm
+def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classes=None,
+                log_function=None, alarm_function=None):
+    if log_function is None:
+        log_function = normal_print
+    if alarm_function is None:
+        alarm_function = normal_print
+
     with torch.no_grad():
         imgsz = 640
         split_result = split_url(source)
@@ -34,7 +40,6 @@ def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classe
 
         # Set Dataloader
         vid_path, vid_writer = None, None
-        save_img = True
         dataset = LoadImages(source, img_size=imgsz)
 
         # Get names and colors
@@ -78,37 +83,40 @@ def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classe
 
                     # Write results
                     for *xyxy, conf, cls in reversed(det):
-                        if save_img:  # Add bbox to image
-                            label = f'{names[int(cls)]} {conf:.2f}'
-                            plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
+                        # Add bbox to image
+                        label = f'{names[int(cls)]} {conf:.2f}'
+                        plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
-                            # TODO: print custom information, remind that classes_ may be None
-                            # # xmer: 在下面可以print，也就可以alarm
-                            # if int(cls) in classes_:
-                            #     print(f"xm: detected {names[int(cls)]}")
+                        # TODO: 统计数据here
+                        if classes is None or int(cls) in classes:
+                            alarm_function(f"xm: detected {names[int(cls)]}")
 
                 # Print time (inference + NMS)
                 print(f'{s}Done. ({t2 - t1:.3f}s)')
 
                 # Save results (image with detections)
-                if save_img:
-                    if dataset.mode == 'image':
-                        cv2.imwrite(save_path, im0)
-                    else:  # 'video'
-                        if vid_path != save_path:  # new video
-                            vid_path = save_path
-                            if isinstance(vid_writer, cv2.VideoWriter):
-                                vid_writer.release()  # release previous video writer
+                if dataset.mode == 'image':
+                    cv2.imwrite(save_path, im0)
+                else:  # 'video'
+                    if vid_path != save_path:  # new video
+                        vid_path = save_path
+                        if isinstance(vid_writer, cv2.VideoWriter):
+                            vid_writer.release()  # release previous video writer
 
-                            fourcc = 'mp4v'  # output video codec
-                            fps = vid_cap.get(cv2.CAP_PROP_FPS)
-                            w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                            h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                            vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
-                        vid_writer.write(im0)
+                        fourcc = 'mp4v'  # output video codec
+                        fps = vid_cap.get(cv2.CAP_PROP_FPS)
+                        w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
+                    vid_writer.write(im0)
 
-        print(f"Results saved to {save_dir}")
-        print(f'Done. ({time.time() - t0:.3f}s)')  # 展示总时间
+        log_function(f"Results saved to {save_dir}")
+        log_function(f'Done. ({time.time() - t0:.3f}s)')
+        # TODO: alarm here
+
+
+def normal_print(text):
+    print(text)
 
 
 if __name__ == '__main__':
