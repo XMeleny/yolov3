@@ -13,23 +13,18 @@ from utils.general import check_img_size, non_max_suppression, apply_classifier,
 from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 
+from path_helper import *
+
 
 # TODO: rename to helper.py
 
 def real_detect(weights_, source_, img_size_,
                 conf_thres_, iou_thres_, device_,
-                view_img_, save_txt_, save_conf_,
-                classes_, agnostic_nms_, augment_,
-                project_, name_, exist_ok_, save_img):
-    source, weights, view_img, save_txt, imgsz = source_, weights_, view_img_, save_txt_, img_size_
-    webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
-        ('rtsp://', 'rtmp://', 'http://'))
-    # webcam = False
+                classes_, agnostic_nms_, augment_, ):
+    source, weights, imgsz = source_, weights_, img_size_
+    split_result = split_url(source)
 
-    # TODO: change save_dir and save_file_name
-    # Directories
-    save_dir = Path(increment_path(Path(project_) / name_, exist_ok=exist_ok_))  # increment run
-    (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
+    save_dir = split_result['dir']
 
     # Initialize
     set_logging()
@@ -42,23 +37,10 @@ def real_detect(weights_, source_, img_size_,
     if half:
         model.half()  # to FP16
 
-    # classify = False
-    # Second-stage classifier
-    classify = False
-    if classify:
-        modelc = load_classifier(name='resnet101', n=2)  # initialize
-        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
-
-    # 只考虑本地视频，所以不可能是webcam，只会有else的情况
     # Set Dataloader
     vid_path, vid_writer = None, None
-    if webcam:
-        view_img = True
-        cudnn.benchmark = True  # set True to speed up constant image size inference
-        dataset = LoadStreams(source, img_size=imgsz)
-    else:
-        save_img = True
-        dataset = LoadImages(source, img_size=imgsz)
+    save_img = True
+    dataset = LoadImages(source, img_size=imgsz)
 
     # Get names and colors
     names = model.module.names if hasattr(model, 'module') else model.names  # 应该是在这里获得names
@@ -83,23 +65,13 @@ def real_detect(weights_, source_, img_size_,
         pred = non_max_suppression(pred, conf_thres_, iou_thres_, classes=classes_, agnostic=agnostic_nms_)
         t2 = time_synchronized()
 
-        # classify = False
-        # Apply Classifier
-        if classify:
-            pred = apply_classifier(pred, modelc, img, im0s)
-
         # Process detections
         for i, det in enumerate(pred):  # detections per image
-            if webcam:  # batch_size >= 1
-                p, s, im0, frame = path[i], '%g: ' % i, im0s[i].copy(), dataset.count
-            else:
-                p, s, im0, frame = path, '', im0s, getattr(dataset, 'frame', 0)
+            s, im0, frame = '', im0s, getattr(dataset, 'frame', 0)
 
-            p = Path(p)  # to Path
-            save_path = str(save_dir / p.name)  # img.jpg
-            txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
+            save_path = get_des_file_path(path, suffix="detected")
+
             s += '%gx%g ' % img.shape[2:]  # print string
-            gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
@@ -111,13 +83,7 @@ def real_detect(weights_, source_, img_size_,
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
-                    if save_txt:  # Write to file
-                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf) if save_conf_ else (cls, *xywh)  # label format
-                        with open(txt_path + '.txt', 'a') as f:
-                            f.write(('%g ' * len(line)).rstrip() % line + '\n')
-
-                    if save_img or view_img:  # Add bbox to image
+                    if save_img:  # Add bbox to image
                         label = f'{names[int(cls)]} {conf:.2f}'
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
@@ -128,11 +94,6 @@ def real_detect(weights_, source_, img_size_,
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
-
-            # view img = false
-            # Stream results
-            if view_img:
-                cv2.imshow(str(p), im0)
 
             # Save results (image with detections)
             if save_img:
@@ -151,22 +112,16 @@ def real_detect(weights_, source_, img_size_,
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
                     vid_writer.write(im0)
 
-    # save_txt 为 false ，所以 s=''
-    if save_txt or save_img:
-        s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
-        print(f"Results saved to {save_dir}{s}")
-
+    print(f"Results saved to {save_dir}")
     print(f'Done. ({time.time() - t0:.3f}s)')  # 展示总时间
 
 
-def func_detect(weights='data/best.pt', source='data/res_test.mp4', img_size=640,
+def func_detect(weights, source, img_size=640,
                 conf_thres=0.25, iou_thres=0.45, device='',
-                view_img=False, save_txt=False, save_conf=False,
-                classes=None, agnostic_nms=False, augment=False,
-                project='runs/detect', name='exp', exist_ok=False, save_img=False):
+                classes=None, agnostic_nms=False, augment=False):
     with torch.no_grad():
-        real_detect(weights, source, img_size, conf_thres, iou_thres, device, view_img, save_txt, save_conf,
-                    classes, agnostic_nms, augment, project, name, exist_ok, save_img)
+        real_detect(weights, source, img_size, conf_thres, iou_thres, device,
+                    classes, agnostic_nms, augment)
 
 
 if __name__ == '__main__':

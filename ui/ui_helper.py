@@ -1,4 +1,3 @@
-import os
 import tkinter as tk
 from _thread import *
 from tkinter import filedialog
@@ -10,12 +9,15 @@ from PIL import ImageTk, Image
 import func_detect
 from models.experimental import attempt_load
 
+from path_helper import *
+
 
 # TODO: delete test data and test code
 # TODO: 耗时操作打 progress
 # TODO: 打 log
 # TODO: 按钮 enable 和 disable
 # TODO: 检查所有 pass 的方法
+# TODO: static method 移出到对应的helper文件中
 
 class Window:
     # ui
@@ -465,39 +467,10 @@ class Window:
 
         self.update_progress("视频旋转完成...")
 
-    @staticmethod
-    def split_url(url):
-        (_dir, file) = os.path.split(url)
-        temp = file.split('.')
-        filename = temp[0]
-        ext = temp[1]
-        return {'dir': _dir, 'filename': filename, 'ext': ext}
-
-    @staticmethod
-    def get_des_file_path(src_url, prefix='', suffix='', ext=''):
-        split_result = Window.split_url(src_url)
-
-        # 添加前后缀
-        filename = split_result['filename']
-        if len(prefix) > 0:
-            filename = prefix + "_" + filename
-        if len(suffix) > 0:
-            filename = filename + "_" + suffix
-
-        # 添加文件格式
-        if len(ext) == 0:
-            filename = filename + "." + split_result['ext']
-        else:
-            filename = filename + "." + ext
-
-        des_url = os.path.join(split_result['dir'], filename)
-        # print(f'des_url = {des_url}')
-        return des_url
-
     def get_rotated_video_path(self):
         if self.rotate_degree == 0:
             return self.video_path
-        return Window.get_des_file_path(self.video_path, suffix=f'rotated_{self.rotate_degree}')
+        return get_des_file_path(self.video_path, suffix=f'rotated_{self.rotate_degree}')
 
     def update_progress(self, text):
         self.label_process['text'] = text
