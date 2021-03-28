@@ -368,17 +368,35 @@ class Window:
         return res
 
     def start_detect_clicked(self):
-        try:
-            start_new_thread(self.start_detect, ())
-        except Exception:
-            print(Exception)
-            print("error: unable to start a new thread")
+        self.disable_all_buttons()
+        self.start_detect()
 
-    def start_detect(self):
+    def disable_all_buttons(self):
+        self.btn_choose_video['state'] = tk.DISABLED
+        self.btn_choose_model['state'] = tk.DISABLED
+        self.btn_rotate_video['state'] = tk.DISABLED
+        self.btn_choose_classes['state'] = tk.DISABLED
+        self.btn_start_detect['state'] = tk.DISABLED
+
+    def enable_all_buttons(self):
+        self.btn_choose_video['state'] = tk.NORMAL
+        self.btn_choose_model['state'] = tk.NORMAL
+        self.enable_btn_rotate_video()
+        self.enable_btn_choose_classes()
+        self.enable_btn_start_detect()
+
+    def thread_start_detect(self):
         self.rotate_video()
         func_detect.func_detect(weights=self.model_path,
                                 source=self.get_rotated_video_path(),
                                 classes=self.get_chosen_classes_list())
+        self.enable_all_buttons()
+
+    def start_detect(self):
+        try:
+            start_new_thread(self.thread_start_detect, ())
+        except Exception:
+            print(f"error when start new thread, Exception = {Exception}")
 
     def update_video_path(self):
         self.video_path = filedialog.askopenfilename(filetypes=[(self.TEXT_VIDEO_FILE_TYPE, self.VIDEO_TYPE)])
