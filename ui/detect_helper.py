@@ -15,17 +15,15 @@ from path_helper import *
 
 # TODO: rename to helper.py
 
-def real_detect(weights_, source_, img_size_,
-                conf_thres_, iou_thres_, device_,
-                classes_, agnostic_nms_):
-    source, weights, imgsz = source_, weights_, img_size_
+def real_detect(weights_, source_, conf_thres_, iou_thres_, classes_):
+    source, weights, imgsz = source_, weights_, 640
     split_result = split_url(source)
 
     save_dir = split_result['dir']
 
     # Initialize
     set_logging()
-    device = select_device(device_)
+    device = select_device('')
     half = device.type != 'cpu'  # half precision only supported on CUDA
 
     # Load model
@@ -59,7 +57,7 @@ def real_detect(weights_, source_, img_size_,
         pred = model(img, False)[0]
 
         # Apply NMS
-        pred = non_max_suppression(pred, conf_thres_, iou_thres_, classes=classes_, agnostic=agnostic_nms_)
+        pred = non_max_suppression(pred, conf_thres_, iou_thres_, classes=classes_, agnostic=False)
         t2 = time_synchronized()
 
         # Process detections
@@ -115,12 +113,9 @@ def real_detect(weights_, source_, img_size_,
 
 # TODO: add params 1. alarm 2. log
 # TODO: delete parems: 1. img_size 2. device 3. agnostic_nms
-def func_detect(weights, source, img_size=640,
-                conf_thres=0.25, iou_thres=0.45, device='',
-                classes=None, agnostic_nms=False):
+def func_detect(weights, source, conf_thres=0.25, iou_thres=0.45, classes=None):
     with torch.no_grad():
-        real_detect(weights, source, img_size, conf_thres, iou_thres, device,
-                    classes, agnostic_nms)
+        real_detect(weights, source, conf_thres, iou_thres, classes)
 
 
 if __name__ == '__main__':
