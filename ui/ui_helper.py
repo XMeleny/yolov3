@@ -162,69 +162,114 @@ class Window:
         print(f'widget.winfo_screenmmwidth = {widget.winfo_screenmmwidth()}')
         print(f'widget.winfo_screenwidth = {widget.winfo_screenwidth()}')
 
-    def enable_btn_choose_video(self):
-        self.btn_choose_video['state'] = tk.NORMAL
-
-    def enable_btn_choose_model(self):
-        self.btn_choose_model['state'] = tk.NORMAL
-
     def enable_btn_rotate_video(self):
         if self.is_video:
             self.btn_rotate_video['state'] = tk.NORMAL
-        else:
-            self.btn_rotate_video['state'] = tk.DISABLED
 
     def enable_btn_choose_classes(self):
         if self.is_model:
             self.btn_choose_classes['state'] = tk.NORMAL
-        else:
-            self.btn_choose_classes['state'] = tk.DISABLED
 
     def enable_btn_start_detect(self):
         if self.is_video and self.is_model:
             self.btn_start_detect['state'] = tk.NORMAL
-        else:
-            self.btn_start_detect['state'] = tk.DISABLED
-
-    def update_video_data(self):
-        # 包括 video_path, first_frame, is_video 等
-        pass
-
-    def update_model_data(self):
-        # 包括 model_path, all_classes, chosen_classes 等
-        pass
-
-    def update_video_widgets(self):
-        pass
-
-    def update_model_widgets(self):
-        pass
 
     def choose_video_clicked(self):
-        self.update_video_path()
-        self.update_label_video_path()
+        self.restore_video_data()
+        self.restore_video_widgets()
+        self.get_video()
 
-        self.update_is_video()
-        self.update_first_frame()
-        self.update_canvas_frame_auto_resize()
-
-        self.update_btn_rotate_video_state()
-        self.update_btn_start_detect_state()
-
+    def restore_video_data(self):
+        self.is_video = False
+        self.video_path = ""
         self.rotate_degree = 0
+        self.first_frame = None
+
+    def restore_video_widgets(self):
+        self.btn_rotate_video['state'] = tk.DISABLED
+        self.btn_start_detect['state'] = tk.DISABLED
+        self.label_video_path['text'] = self.video_path
+        self.canvas.delete("all")
+
+    def get_video(self):
+        self.video_path = filedialog.askopenfilename(filetypes=[(self.TEXT_VIDEO_FILE_TYPE, self.VIDEO_TYPE)])
+        self.label_video_path['text'] = self.video_path
+        try:
+            start_new_thread(self.thread_get_first_frame, ())
+        except Exception:
+            print(f"error when start new thread, Exception = {Exception}")
+
+    def thread_get_first_frame(self):
+        """
+        This function should be run in new thread.
+        Please use start_new_thread to run this function
+        """
+        if len(self.video_path) <= 0:
+            return
+
+        cap = cv2.VideoCapture(self.video_path)
+
+        self.is_video = cap.isOpened()
+
+        if self.is_video:
+            success, frame = cap.read()
+            if success:
+                self.first_frame = frame
+                self.update_canvas_frame_auto_resize()
+                self.enable_btn_rotate_video()
+                self.enable_btn_start_detect()
+
+        cap.release()
 
     def rotate_video_clicked(self):
         self.rotate_first_frame()
 
     def choose_model_clicked(self):
-        self.model_path = filedialog.askopenfilename(filetypes=[(self.TEXT_MODEL_FILE_TYPE, self.MODEL_TYPE)])
+        self.restore_model_data()
+        self.restore_model_widgets()
+        self.get_model()
+
+    def restore_model_data(self):
+        self.is_model = False
+        self.model_path = ""
+        self.list_all_classes = []
+        self.dict_chosen_classes = {}
+
+    def restore_model_widgets(self):
+        self.btn_choose_classes['state'] = tk.DISABLED
+        self.btn_start_detect['state'] = tk.DISABLED
         self.label_model_path['text'] = self.model_path
 
+    def get_model(self):
+        self.model_path = filedialog.askopenfilename(filetypes=[(self.TEXT_MODEL_FILE_TYPE, self.MODEL_TYPE)])
+        self.label_model_path['text'] = self.model_path
         try:
-            start_new_thread(self.choose_model, ())  # 获取 all_classes 是耗时操作，需要多线程操作，避免卡死页面
+            start_new_thread(self.thread_get_classes, ())
         except Exception:
-            print(Exception)
-            print("error: unable to start a new thread")
+            print(f"error when start new thread, Exception = {Exception}")
+
+    def thread_get_classes(self):
+        """
+        This function should be run in new thread.
+        Please use start_new_thread to run this function
+        """
+        if len(self.model_path) <= 0:
+            return
+
+        try:
+            model = attempt_load(self.model_path)
+
+            self.is_model = True
+
+            self.list_all_classes = model.module.names if hasattr(model, 'module') else model.names
+            for class_name in self.list_all_classes:
+                self.dict_chosen_classes[class_name] = tk.BooleanVar(value=True)
+        except Exception:
+            self.is_model = False
+            print(f"error when getting classes, Exception = {Exception}")
+
+        self.enable_btn_choose_classes()
+        self.enable_btn_start_detect()
 
     def setup_classes(self):
         # clear
@@ -234,8 +279,11 @@ class Window:
         # get classes, time consuming
         self.update_progress("开始检测分类...")
         if len(self.model_path) > 0:
-            model = attempt_load(self.model_path)
-            self.list_all_classes = model.module.names if hasattr(model, 'module') else model.names
+            try:
+                model = attempt_load(self.model_path)
+                self.list_all_classes = model.module.names if hasattr(model, 'module') else model.names
+            except Exception:
+                print(Exception)
         self.update_progress("分类检测完成...")
         # test
         # for i in range(50):
