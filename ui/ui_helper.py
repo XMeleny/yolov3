@@ -372,13 +372,11 @@ class Window:
             print(f"error when start new thread, Exception = {Exception}")
 
     def update_canvas_frame_auto_resize(self):
-        if self.first_frame is None:
-            self.canvas.delete("all")
-            return
+        # self.window.update()  # 竟然不需要 update 就能正常获取 w 和 h
+        # self.print_winfo(self.canvas)
 
-        # FIXME: 尝试 window.update() 看获取 winfo_width 是否正常
-        canvas_width = self.canvas.winfo_reqwidth()
-        canvas_height = self.canvas.winfo_reqheight()
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
 
         shape = self.first_frame.shape
         pic_width = shape[1]
@@ -410,6 +408,7 @@ class Window:
 
     def rotate_first_frame(self):
         self.rotate_degree = (self.rotate_degree + 90) % 360
+        # print(f"rotate degree = {self.rotate_degree}")
         self.first_frame = self.rotate_frame(self.first_frame, 90)
         self.update_canvas_frame_auto_resize()
 
