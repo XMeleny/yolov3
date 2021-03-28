@@ -1,17 +1,14 @@
 import time
-from pathlib import Path
 
 import cv2
 import torch
-import torch.backends.cudnn as cudnn
 from numpy import random
 
 from models.experimental import attempt_load
-from utils.datasets import LoadStreams, LoadImages
-from utils.general import check_img_size, non_max_suppression, apply_classifier, scale_coords, \
-    xyxy2xywh, set_logging, increment_path
+from utils.datasets import LoadImages
+from utils.general import check_img_size, non_max_suppression, scale_coords, set_logging
 from utils.plots import plot_one_box
-from utils.torch_utils import select_device, load_classifier, time_synchronized
+from utils.torch_utils import select_device, time_synchronized
 
 from path_helper import *
 
@@ -20,7 +17,7 @@ from path_helper import *
 
 def real_detect(weights_, source_, img_size_,
                 conf_thres_, iou_thres_, device_,
-                classes_, agnostic_nms_, augment_, ):
+                classes_, agnostic_nms_):
     source, weights, imgsz = source_, weights_, img_size_
     split_result = split_url(source)
 
@@ -59,7 +56,7 @@ def real_detect(weights_, source_, img_size_,
 
         # Inference
         t1 = time_synchronized()
-        pred = model(img, augment=augment_)[0]
+        pred = model(img, False)[0]
 
         # Apply NMS
         pred = non_max_suppression(pred, conf_thres_, iou_thres_, classes=classes_, agnostic=agnostic_nms_)
@@ -118,10 +115,10 @@ def real_detect(weights_, source_, img_size_,
 
 def func_detect(weights, source, img_size=640,
                 conf_thres=0.25, iou_thres=0.45, device='',
-                classes=None, agnostic_nms=False, augment=False):
+                classes=None, agnostic_nms=False):
     with torch.no_grad():
         real_detect(weights, source, img_size, conf_thres, iou_thres, device,
-                    classes, agnostic_nms, augment)
+                    classes, agnostic_nms)
 
 
 if __name__ == '__main__':

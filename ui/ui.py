@@ -1,23 +1,18 @@
-import tkinter as tk
 from _thread import *
 from tkinter import filedialog
 
-import cv2
-import numpy as np
 from PIL import ImageTk, Image
 
-import func_detect
-from models.experimental import attempt_load
-
+from detect_helper import *
 from path_helper import *
+from image_and_video_helper import *
+from widget_helper import *
 
 
 # TODO: delete test data and test code
 # TODO: 耗时操作打 progress
 # TODO: 打 log
-# TODO: 按钮 enable 和 disable
 # TODO: 检查所有 pass 的方法
-# TODO: static method 移出到对应的helper文件中
 
 class Window:
     # ui
@@ -72,7 +67,7 @@ class Window:
         self.init_ui()
 
     def init_ui(self):
-        self.window = Window.get_max_window()
+        self.window = get_max_window()
         self.window.update()
 
         self.create_widgets()
@@ -146,24 +141,6 @@ class Window:
         self.btn_choose_classes['command'] = lambda: self.choose_classes_clicked()
         self.btn_start_detect['command'] = lambda: self.start_detect_clicked()
 
-    @staticmethod
-    def get_max_window():
-        res_window = tk.Tk()
-        res_window.title("my window")
-
-        w, h = res_window.maxsize()
-        res_window.geometry("{}x{}".format(w, h))
-
-        return res_window
-
-    @staticmethod
-    def print_winfo(widget):
-        print(f'widget.winfo_width = {widget.winfo_width()}')
-        print(f'widget.winfo_reqwidth = {widget.winfo_reqwidth()}')
-        print(f'widget.winfo_vrootwidth = {widget.winfo_vrootwidth()}')
-        print(f'widget.winfo_screenmmwidth = {widget.winfo_screenmmwidth()}')
-        print(f'widget.winfo_screenwidth = {widget.winfo_screenwidth()}')
-
     def enable_btn_rotate_video(self):
         if self.is_video:
             self.btn_rotate_video['state'] = tk.NORMAL
@@ -191,6 +168,7 @@ class Window:
         self.btn_rotate_video['state'] = tk.DISABLED
         self.btn_start_detect['state'] = tk.DISABLED
         self.label_video_path['text'] = self.video_path
+        self.update_progress("")
         self.canvas.delete("all")
 
     def get_video(self):
@@ -209,6 +187,7 @@ class Window:
         if len(self.video_path) <= 0:
             return
 
+        self.update_progress("获取视频开始...")
         cap = cv2.VideoCapture(self.video_path)
 
         self.is_video = cap.isOpened()
@@ -222,6 +201,7 @@ class Window:
                 self.enable_btn_start_detect()
 
         cap.release()
+        self.update_progress("视频获取完成...")
 
     def rotate_video_clicked(self):
         self.rotate_first_frame()
@@ -241,6 +221,7 @@ class Window:
         self.btn_choose_classes['state'] = tk.DISABLED
         self.btn_start_detect['state'] = tk.DISABLED
         self.label_model_path['text'] = self.model_path
+        self.update_progress("")
 
     def get_model(self):
         self.model_path = filedialog.askopenfilename(filetypes=[(self.TEXT_MODEL_FILE_TYPE, self.MODEL_TYPE)])
@@ -258,6 +239,7 @@ class Window:
         if len(self.model_path) <= 0:
             return
 
+        self.update_progress("开始获取检测类型...")
         try:
             model = attempt_load(self.model_path)
 
@@ -266,12 +248,14 @@ class Window:
             self.list_all_classes = model.module.names if hasattr(model, 'module') else model.names
             for class_name in self.list_all_classes:
                 self.dict_chosen_classes[class_name] = tk.BooleanVar(value=True)
+
+            self.enable_btn_choose_classes()
+            self.enable_btn_start_detect()
         except Exception:
             self.is_model = False
             print(f"error when getting classes, Exception = {Exception}")
 
-        self.enable_btn_choose_classes()
-        self.enable_btn_start_detect()
+        self.update_progress("检测类型获取完成...")
 
     def choose_classes_clicked(self):
         # TODO: 焦点控制。如何将焦点控制在新打开的窗口，在新窗口打开的时候不允许点击主窗口？
@@ -361,10 +345,17 @@ class Window:
         This function should be run in new thread.
         Please use start_new_thread to run this function
         """
-        self.rotate_video()
-        func_detect.func_detect(weights=self.model_path,
-                                source=self.get_rotated_video_path(),
-                                classes=self.get_chosen_classes_list())
+        if self.rotate_degree != 0:
+            self.update_progress("开始旋转视频...")
+            rotate_video(self.video_path, self.rotate_degree, self.get_rotated_video_path())
+            self.update_progress("视频旋转完成...")
+
+        self.update_progress("开始检测...")
+        func_detect(weights=self.model_path,
+                    source=self.get_rotated_video_path(),
+                    classes=self.get_chosen_classes_list())
+        self.update_progress("检测完成...")
+
         self.enable_all_buttons()
 
     def start_detect(self):
@@ -411,61 +402,8 @@ class Window:
     def rotate_first_frame(self):
         self.rotate_degree = (self.rotate_degree + 90) % 360
         # print(f"rotate degree = {self.rotate_degree}")
-        self.first_frame = self.rotate_frame(self.first_frame, 90)
+        self.first_frame = rotate_frame(self.first_frame, 90)
         self.update_canvas_frame_auto_resize()
-
-    @staticmethod
-    def rotate_frame(frame, degree):
-        if frame is None:
-            return None
-        else:
-            h, w = frame.shape[:2]
-            (cx, cy) = (w / 2, h / 2)
-
-            # 设置旋转矩阵
-            matrix = cv2.getRotationMatrix2D((cx, cy), -degree, scale=1.0)  # FIXME: -degree 和 degree有什么区别吗？
-            cos = np.abs(matrix[0, 0])
-            sin = np.abs(matrix[0, 1])
-
-            # 计算图像旋转后的新边界
-            nW = int((h * sin) + (w * cos))
-            nH = int((h * cos) + (w * sin))
-
-            # 调整旋转矩阵的移动距离（t_{x}, t_{y}）
-            matrix[0, 2] += (nW / 2) - cx
-            matrix[1, 2] += (nH / 2) - cy
-
-            frame = cv2.warpAffine(frame.copy(), matrix, (nW, nH))
-            return frame
-
-    def rotate_video(self):
-        if self.rotate_degree == 0:
-            return
-
-        self.update_progress("开始旋转视频...")
-        src_video = cv2.VideoCapture(self.video_path)
-        fourcc = int(src_video.get(cv2.CAP_PROP_FOURCC))
-        fps = src_video.get(cv2.CAP_PROP_FPS)
-        w = int(src_video.get(cv2.CAP_PROP_FRAME_WIDTH))
-        h = int(src_video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        if self.rotate_degree % 180 == 0:
-            size = (w, h)
-        else:
-            size = (h, w)
-
-        video_writer = cv2.VideoWriter(self.get_rotated_video_path(), fourcc, fps, size)
-
-        read_status, video_frame = src_video.read()
-        while read_status:
-            video_frame = Window.rotate_frame(video_frame, self.rotate_degree)
-            video_writer.write(video_frame)
-            read_status, video_frame = src_video.read()
-
-        src_video.release()
-        video_writer.release()
-
-        self.update_progress("视频旋转完成...")
 
     def get_rotated_video_path(self):
         if self.rotate_degree == 0:
@@ -477,23 +415,6 @@ class Window:
 
     def log(self):
         pass
-
-
-def play_video(video_path):
-    cap = cv2.VideoCapture(video_path)
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-        # if frame is read correctly ret is True
-        if not ret:
-            print("Can't receive frame (stream end?). Exiting ...")
-            break
-        cv2.imshow('frame', frame)
-        if cv2.waitKey(1) == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
