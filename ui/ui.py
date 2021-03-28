@@ -176,8 +176,8 @@ class Window:
         self.label_video_path['text'] = self.video_path
         try:
             start_new_thread(self.thread_get_first_frame, ())
-        except Exception:
-            print(f"error when start new thread, Exception = {Exception}")
+        except Exception as e:
+            print(f"error when start new thread, Exception = {e}")
 
     def thread_get_first_frame(self):
         """
@@ -228,8 +228,8 @@ class Window:
         self.label_model_path['text'] = self.model_path
         try:
             start_new_thread(self.thread_get_classes, ())
-        except Exception:
-            print(f"error when start new thread, Exception = {Exception}")
+        except Exception as e:
+            print(f"error when start new thread, Exception = {e}")
 
     def thread_get_classes(self):
         """
@@ -251,9 +251,9 @@ class Window:
 
             self.enable_btn_choose_classes()
             self.enable_btn_start_detect()
-        except Exception:
+        except Exception as e:
             self.is_model = False
-            print(f"error when getting classes, Exception = {Exception}")
+            print(f"error when getting classes, Exception = {e}")
 
         self.update_progress("检测类型获取完成...")
 
@@ -361,8 +361,8 @@ class Window:
     def start_detect(self):
         try:
             start_new_thread(self.thread_start_detect, ())
-        except Exception:
-            print(f"error when start new thread, Exception = {Exception}")
+        except Exception as e:
+            print(f"error when start new thread, Exception = {e}")
 
     def update_canvas_frame_auto_resize(self):
         # self.window.update()  # 竟然不需要 update 就能正常获取 w 和 h
