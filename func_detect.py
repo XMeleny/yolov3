@@ -24,6 +24,7 @@ def real_detect(weights_, source_, img_size_,
     source, weights, view_img, save_txt, imgsz = source_, weights_, view_img_, save_txt_, img_size_
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://'))
+    # webcam = False
 
     # TODO: change save_dir and save_file_name
     # Directories
@@ -41,12 +42,14 @@ def real_detect(weights_, source_, img_size_,
     if half:
         model.half()  # to FP16
 
+    # classify = False
     # Second-stage classifier
     classify = False
     if classify:
         modelc = load_classifier(name='resnet101', n=2)  # initialize
         modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
 
+    # 只考虑本地视频，所以不可能是webcam，只会有else的情况
     # Set Dataloader
     vid_path, vid_writer = None, None
     if webcam:
@@ -80,6 +83,7 @@ def real_detect(weights_, source_, img_size_,
         pred = non_max_suppression(pred, conf_thres_, iou_thres_, classes=classes_, agnostic=agnostic_nms_)
         t2 = time_synchronized()
 
+        # classify = False
         # Apply Classifier
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
@@ -125,6 +129,7 @@ def real_detect(weights_, source_, img_size_,
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
 
+            # view img = false
             # Stream results
             if view_img:
                 cv2.imshow(str(p), im0)
@@ -146,11 +151,12 @@ def real_detect(weights_, source_, img_size_,
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
                     vid_writer.write(im0)
 
+    # save_txt 为 false ，所以 s=''
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
         print(f"Results saved to {save_dir}{s}")
 
-    print(f'Done. ({time.time() - t0:.3f}s)')
+    print(f'Done. ({time.time() - t0:.3f}s)')  # 展示总时间
 
 
 def func_detect(weights='data/best.pt', source='data/res_test.mp4', img_size=640,
@@ -163,13 +169,9 @@ def func_detect(weights='data/best.pt', source='data/res_test.mp4', img_size=640
                     classes, agnostic_nms, augment, project, name, exist_ok, save_img)
 
 
-def get_names(weights):
-    model = attempt_load(weights)
-    names = model.module.names if hasattr(model, 'module') else model.names
-    print(names)
-    return names
-
-
 if __name__ == '__main__':
-    func_detect(classes=[1],
-                source=r"C:\Users\Meleny\Desktop\m'file\compulsory courses\GraduationProject\dataset\video\test.mp4")
+    func_detect(
+        weights=r"C:\Users\Meleny\Desktop\m'file\compulsory courses\GraduationProject\dataset\best.pt",
+        source=r"C:\Users\Meleny\Desktop\m'file\compulsory courses\GraduationProject\dataset\video\test.mp4",
+        classes=[1]
+    )
