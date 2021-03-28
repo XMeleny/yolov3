@@ -1,22 +1,21 @@
 import os
 import tkinter as tk
+from _thread import *
 from tkinter import filedialog
 
 import cv2
 import numpy as np
 from PIL import ImageTk, Image
 
-from models.experimental import attempt_load
-
 import func_detect
-
-from _thread import *
+from models.experimental import attempt_load
 
 
 # TODO: delete test data and test code
 # TODO: 耗时操作打 progress
 # TODO: 打 log
 # TODO: 按钮 enable 和 disable
+# TODO: 检查所有 pass 的方法
 
 class Window:
     # ui
@@ -62,13 +61,10 @@ class Window:
     video_path = ""
     model_path = ""
     list_all_classes = []
-    set_chosen_classes = {}
+    dict_chosen_classes = {}
 
     is_video = False
     is_model = False
-    getting_model = False
-    rotating = False
-    detecting = False
 
     def __init__(self):
         self.init_ui()
@@ -166,6 +162,44 @@ class Window:
         print(f'widget.winfo_screenmmwidth = {widget.winfo_screenmmwidth()}')
         print(f'widget.winfo_screenwidth = {widget.winfo_screenwidth()}')
 
+    def enable_btn_choose_video(self):
+        self.btn_choose_video['state'] = tk.NORMAL
+
+    def enable_btn_choose_model(self):
+        self.btn_choose_model['state'] = tk.NORMAL
+
+    def enable_btn_rotate_video(self):
+        if self.is_video:
+            self.btn_rotate_video['state'] = tk.NORMAL
+        else:
+            self.btn_rotate_video['state'] = tk.DISABLED
+
+    def enable_btn_choose_classes(self):
+        if self.is_model:
+            self.btn_choose_classes['state'] = tk.NORMAL
+        else:
+            self.btn_choose_classes['state'] = tk.DISABLED
+
+    def enable_btn_start_detect(self):
+        if self.is_video and self.is_model:
+            self.btn_start_detect['state'] = tk.NORMAL
+        else:
+            self.btn_start_detect['state'] = tk.DISABLED
+
+    def update_video_data(self):
+        # 包括 video_path, first_frame, is_video 等
+        pass
+
+    def update_model_data(self):
+        # 包括 model_path, all_classes, chosen_classes 等
+        pass
+
+    def update_video_widgets(self):
+        pass
+
+    def update_model_widgets(self):
+        pass
+
     def choose_video_clicked(self):
         self.update_video_path()
         self.update_label_video_path()
@@ -210,9 +244,9 @@ class Window:
         # print(f"all_classes = {self.all_classes}")
 
         # 默认全选
-        self.set_chosen_classes.clear()
+        self.dict_chosen_classes.clear()
         for class_name in self.list_all_classes:
-            self.set_chosen_classes[class_name] = tk.BooleanVar(value=True)
+            self.dict_chosen_classes[class_name] = tk.BooleanVar(value=True)
 
     def choose_model(self):
         self.setup_classes()
@@ -248,7 +282,7 @@ class Window:
         frame = tk.Frame(canvas)
 
         for idx, class_name in enumerate(self.list_all_classes):
-            tk.Checkbutton(frame, text=class_name, variable=self.set_chosen_classes[class_name]).grid(row=idx)
+            tk.Checkbutton(frame, text=class_name, variable=self.dict_chosen_classes[class_name]).grid(row=idx)
         canvas.create_window((0, 0), window=frame, anchor='nw')
 
         # 要 update 才能正常设置
@@ -267,11 +301,11 @@ class Window:
         choose_window.mainloop()
 
     def select_all_clicked(self):
-        for bool_var in self.set_chosen_classes.values():
+        for bool_var in self.dict_chosen_classes.values():
             bool_var.set(True)
 
     def deselect_all_clicked(self):
-        for bool_var in self.set_chosen_classes.values():
+        for bool_var in self.dict_chosen_classes.values():
             bool_var.set(False)
 
     def confirm_clicked(self, choose_window):
@@ -280,8 +314,8 @@ class Window:
 
     def get_chosen_classes_list(self):
         res = []
-        for key in self.set_chosen_classes:
-            if self.set_chosen_classes[key].get() and key in self.list_all_classes:
+        for key in self.dict_chosen_classes:
+            if self.dict_chosen_classes[key].get() and key in self.list_all_classes:
                 res.append(self.list_all_classes.index(key))
         return res
 
@@ -307,11 +341,10 @@ class Window:
     def update_is_video(self):
         if len(self.video_path) <= 0:
             self.is_video = False
-            return
-
-        cap = cv2.VideoCapture(self.video_path)
-        self.is_video = cap.isOpened()
-        cap.release()
+        else:
+            cap = cv2.VideoCapture(self.video_path)
+            self.is_video = cap.isOpened()
+            cap.release()
 
     def update_first_frame(self):
         if len(self.video_path) <= 0 or not self.is_video:
