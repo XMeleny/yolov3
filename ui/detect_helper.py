@@ -113,6 +113,8 @@ def real_detect(weights_, source_, img_size_,
     print(f'Done. ({time.time() - t0:.3f}s)')  # 展示总时间
 
 
+# TODO: add params 1. alarm 2. log
+# TODO: delete parems: 1. img_size 2. device 3. agnostic_nms
 def func_detect(weights, source, img_size=640,
                 conf_thres=0.25, iou_thres=0.45, device='',
                 classes=None, agnostic_nms=False):

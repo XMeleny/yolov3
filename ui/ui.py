@@ -13,6 +13,7 @@ from widget_helper import *
 # TODO: 耗时操作打 progress
 # TODO: 打 log
 # TODO: 检查所有 pass 的方法
+# TODO: 在关闭窗口的时候加一些保护的行为，比如关闭资源
 
 class Window:
     # ui
@@ -412,8 +413,10 @@ class Window:
 
     def update_progress(self, text):
         self.label_process['text'] = text
+        # TODO: log
 
-    def log(self):
+    def log(self, text):
+        # TODO: get timing
         pass
 
 
