@@ -271,37 +271,6 @@ class Window:
         self.enable_btn_choose_classes()
         self.enable_btn_start_detect()
 
-    def setup_classes(self):
-        # clear
-        self.list_all_classes = []
-
-        # TODO: move this part to func_detect.py
-        # get classes, time consuming
-        self.update_progress("开始检测分类...")
-        if len(self.model_path) > 0:
-            try:
-                model = attempt_load(self.model_path)
-                self.list_all_classes = model.module.names if hasattr(model, 'module') else model.names
-            except Exception:
-                print(Exception)
-        self.update_progress("分类检测完成...")
-        # test
-        # for i in range(50):
-        #     self.list_all_classes.append(str(i))
-
-        # print(f"all_classes = {self.all_classes}")
-
-        # 默认全选
-        self.dict_chosen_classes.clear()
-        for class_name in self.list_all_classes:
-            self.dict_chosen_classes[class_name] = tk.BooleanVar(value=True)
-
-    def choose_model(self):
-        self.setup_classes()
-
-        self.update_btn_choose_classes_state()
-        self.update_btn_start_detect_state()
-
     def choose_classes_clicked(self):
         # TODO: 焦点控制。如何将焦点控制在新打开的窗口，在新窗口打开的时候不允许点击主窗口？
         self.show_choose_window()
@@ -386,6 +355,10 @@ class Window:
         self.enable_btn_start_detect()
 
     def thread_start_detect(self):
+        """
+        This function should be run in new thread.
+        Please use start_new_thread to run this function
+        """
         self.rotate_video()
         func_detect.func_detect(weights=self.model_path,
                                 source=self.get_rotated_video_path(),
@@ -397,33 +370,6 @@ class Window:
             start_new_thread(self.thread_start_detect, ())
         except Exception:
             print(f"error when start new thread, Exception = {Exception}")
-
-    def update_video_path(self):
-        self.video_path = filedialog.askopenfilename(filetypes=[(self.TEXT_VIDEO_FILE_TYPE, self.VIDEO_TYPE)])
-
-    def update_label_video_path(self):
-        self.label_video_path['text'] = self.video_path
-
-    def update_is_video(self):
-        if len(self.video_path) <= 0:
-            self.is_video = False
-        else:
-            cap = cv2.VideoCapture(self.video_path)
-            self.is_video = cap.isOpened()
-            cap.release()
-
-    def update_first_frame(self):
-        if len(self.video_path) <= 0 or not self.is_video:
-            self.first_frame = None
-            return
-
-        video_capture = cv2.VideoCapture(self.video_path)
-        success, frame = video_capture.read()
-        video_capture.release()
-        if success:
-            self.first_frame = frame
-        else:
-            self.first_frame = None
 
     def update_canvas_frame_auto_resize(self):
         if self.first_frame is None:
@@ -463,9 +409,6 @@ class Window:
         self.canvas.create_image(center_x, center_y, image=tk_img)
 
     def rotate_first_frame(self):
-        if self.first_frame is None:
-            return
-
         self.rotate_degree = (self.rotate_degree + 90) % 360
         self.first_frame = self.rotate_frame(self.first_frame, 90)
         self.update_canvas_frame_auto_resize()
@@ -556,24 +499,6 @@ class Window:
         if self.rotate_degree == 0:
             return self.video_path
         return Window.get_des_file_path(self.video_path, suffix=f'rotated_{self.rotate_degree}')
-
-    def update_btn_rotate_video_state(self):
-        if self.is_video:
-            self.btn_rotate_video['state'] = tk.NORMAL
-        else:
-            self.btn_rotate_video['state'] = tk.DISABLED
-
-    def update_btn_choose_classes_state(self):
-        if len(self.list_all_classes) > 0:
-            self.btn_choose_classes['state'] = tk.NORMAL
-        else:
-            self.btn_choose_classes['state'] = tk.DISABLED
-
-    def update_btn_start_detect_state(self):
-        if self.is_video and len(self.list_all_classes) > 0:
-            self.btn_start_detect['state'] = tk.NORMAL
-        else:
-            self.btn_start_detect['state'] = tk.DISABLED
 
     def update_progress(self, text):
         self.label_process['text'] = text
