@@ -36,6 +36,10 @@ def get_des_file_path(src_url, prefix='', suffix='', ext=''):
     return des_url
 
 
+def get_detected_save_path(src_url):
+    return get_des_file_path(src_url, suffix="detected")
+
+
 if __name__ == '__main__':
     print(
         split_url(r"C:\Users\Meleny\Desktop\m'file\compulsory courses\GraduationProject\dataset\video\res_test\images"))

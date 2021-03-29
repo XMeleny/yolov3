@@ -13,3 +13,5 @@
 # frame 的用法 https://blog.csdn.net/qq_37431083/article/details/103960673
 
 # scrollable frame: https://stackoverflow.com/questions/16188420/tkinter-scrollbar-for-frame
+
+# 关闭窗口事件： https://cloud.tencent.com/developer/ask/34460

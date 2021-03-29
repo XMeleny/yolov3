@@ -13,13 +13,15 @@ from utils.torch_utils import select_device, time_synchronized
 from path_helper import *
 
 
+def normal_print(text):
+    print(text)
+
+
 # TODO: add function: 1. log, 2. alarm
 def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classes=None,
-                log_function=None, alarm_function=None):
-    if log_function is None:
-        log_function = normal_print
-    if alarm_function is None:
-        alarm_function = normal_print
+                log_function=normal_print, alarm_function=normal_print):
+    count = {}
+    album = {}
 
     with torch.no_grad():
         imgsz = 640
@@ -69,7 +71,7 @@ def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classe
             for i, det in enumerate(pred):  # detections per image
                 s, im0, frame = '', im0s, getattr(dataset, 'frame', 0)
 
-                save_path = get_des_file_path(path, suffix="detected")
+                save_path = get_detected_save_path(path)
 
                 s += '%gx%g ' % img.shape[2:]  # print string
                 if len(det):
@@ -89,7 +91,12 @@ def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classe
 
                         # TODO: 统计数据here
                         if classes is None or int(cls) in classes:
-                            alarm_function(f"xm: detected {names[int(cls)]}")
+                            name = names[int(cls)]
+                            if name in count:
+                                count[name] += 1
+                            else:
+                                count[name] = 1
+                                album[name] = im0
 
                 # Print time (inference + NMS)
                 print(f'{s}Done. ({t2 - t1:.3f}s)')
@@ -112,16 +119,11 @@ def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classe
 
         log_function(f"Results saved to {save_dir}")
         log_function(f'Done. ({time.time() - t0:.3f}s)')
-        # TODO: alarm here
-
-
-def normal_print(text):
-    print(text)
+        alarm_function(f'statistic data = {count}')
 
 
 if __name__ == '__main__':
     func_detect(
         weights=r"C:\Users\Meleny\Desktop\m'file\compulsory courses\GraduationProject\dataset\best.pt",
-        source=r"C:\Users\Meleny\Desktop\m'file\compulsory courses\GraduationProject\dataset\video\test.mp4",
-        classes=[1]
+        source=r"C:\Users\Meleny\Desktop\m'file\compulsory courses\GraduationProject\dataset\video\test.mp4"
     )

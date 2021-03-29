@@ -1,5 +1,6 @@
 from _thread import *
 from tkinter import filedialog
+from tkinter import messagebox
 
 from PIL import ImageTk, Image
 
@@ -18,6 +19,8 @@ from widget_helper import *
 class Window:
     # ui
     window = None
+    choose_window = None
+    result_window = None
 
     canvas = None
 
@@ -54,6 +57,11 @@ class Window:
     VIDEO_TYPE = ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv"
     MODEL_TYPE = ".pt"
 
+    TAG_CANVAS = 'canvas'
+    TAG_TEMP = 'temp'
+
+    WINDOW_CLOSE_EVENT = "WM_DELETE_WINDOW"
+
     first_frame = None
     rotate_degree = 0
     video_path = ""
@@ -63,6 +71,10 @@ class Window:
 
     is_video = False
     is_model = False
+
+    # TODO: result count 好像没啥用
+    result_count = {}
+    result_album = {}
 
     def __init__(self):
         self.init_ui()
@@ -78,6 +90,7 @@ class Window:
         self.init_button_state()
         self.bind_ui_function()
 
+        self.window.protocol(self.WINDOW_CLOSE_EVENT, self.on_closing)
         self.window.mainloop()
 
     def create_widgets(self):
@@ -154,6 +167,10 @@ class Window:
         if self.is_video and self.is_model:
             self.btn_start_detect['state'] = tk.NORMAL
 
+    def restore_result_data(self):
+        self.result_count = {}
+        self.result_album = {}
+
     def choose_video_clicked(self):
         self.restore_video_data()
         self.restore_video_widgets()
@@ -164,6 +181,7 @@ class Window:
         self.video_path = ""
         self.rotate_degree = 0
         self.first_frame = None
+        self.restore_result_data()
 
     def restore_video_widgets(self):
         self.btn_rotate_video['state'] = tk.DISABLED
@@ -171,6 +189,7 @@ class Window:
         self.label_video_path['text'] = self.video_path
         self.update_progress("")
         self.canvas.delete("all")
+        clear_tk_img_list()
 
     def get_video(self):
         self.video_path = filedialog.askopenfilename(filetypes=[(self.TEXT_VIDEO_FILE_TYPE, self.VIDEO_TYPE)])
@@ -197,7 +216,7 @@ class Window:
             success, frame = cap.read()
             if success:
                 self.first_frame = frame
-                self.update_canvas_frame_auto_resize()
+                show_frame_in_canvas_auto_resize(self.canvas, self.first_frame, self.TAG_CANVAS)
                 self.enable_btn_rotate_video()
                 self.enable_btn_start_detect()
 
@@ -217,6 +236,7 @@ class Window:
         self.model_path = ""
         self.list_all_classes = []
         self.dict_chosen_classes = {}
+        self.restore_result_data()
 
     def restore_model_widgets(self):
         self.btn_choose_classes['state'] = tk.DISABLED
@@ -263,8 +283,8 @@ class Window:
         self.show_choose_window()
 
     def show_choose_window(self):
-        choose_window = tk.Toplevel(self.window)
-        choose_window.title('choose classes to detect')
+        self.choose_window = tk.Toplevel(self.window)
+        self.choose_window.title('choose classes to detect')
 
         canvas_weight = 10
 
@@ -275,10 +295,10 @@ class Window:
         all_weight = canvas_weight + 1
         half_weight = int(all_weight / 2)
 
-        canvas = tk.Canvas(choose_window)
+        canvas = tk.Canvas(self.choose_window)
         canvas.grid(row=0, column=0, columnspan=canvas_weight)
 
-        scrollbar = tk.Scrollbar(choose_window, orient=tk.VERTICAL, command=canvas.yview)
+        scrollbar = tk.Scrollbar(self.choose_window, orient=tk.VERTICAL, command=canvas.yview)
         scrollbar.grid(row=0, column=canvas_weight, sticky='ns')
 
         canvas.configure(yscrollcommand=scrollbar.set)
@@ -290,19 +310,21 @@ class Window:
         canvas.create_window((0, 0), window=frame, anchor='nw')
 
         # 要 update 才能正常设置
-        choose_window.update()
+        self.choose_window.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
 
-        btn_select_all = tk.Button(choose_window, text="select all", command=self.select_all_clicked)
+        btn_select_all = tk.Button(self.choose_window, text="select all", command=self.select_all_clicked)
         btn_select_all.grid(row=1, column=0, columnspan=half_weight, sticky='we')
 
-        btn_deselect_all = tk.Button(choose_window, text='deselect all', command=self.deselect_all_clicked)
+        btn_deselect_all = tk.Button(self.choose_window, text='deselect all', command=self.deselect_all_clicked)
         btn_deselect_all.grid(row=1, column=half_weight, columnspan=half_weight, sticky='we')
 
-        btn_confirm = tk.Button(choose_window, text="confirm", command=lambda: self.confirm_clicked(choose_window))
+        btn_confirm = tk.Button(self.choose_window, text="confirm",
+                                command=lambda: self.confirm_clicked(self.choose_window))
         btn_confirm.grid(row=2, column=0, columnspan=all_weight, sticky='we')
 
-        choose_window.mainloop()
+        self.choose_window.protocol(self.WINDOW_CLOSE_EVENT, self.on_choose_window_closing)  # FIXME:
+        self.choose_window.mainloop()
 
     def select_all_clicked(self):
         for bool_var in self.dict_chosen_classes.values():
@@ -365,59 +387,91 @@ class Window:
         except Exception as e:
             print(f"error when start new thread, Exception = {e}")
 
-    def update_canvas_frame_auto_resize(self):
-        # self.window.update()  # 竟然不需要 update 就能正常获取 w 和 h
-        # self.print_winfo(self.canvas)
-
-        canvas_width = self.canvas.winfo_width()
-        canvas_height = self.canvas.winfo_height()
-
-        shape = self.first_frame.shape
-        pic_width = shape[1]
-        pic_height = shape[0]
-
-        canvas_ratio = canvas_width / canvas_height
-        pic_ratio = pic_width / pic_height
-
-        # 尺寸自适应
-        if pic_ratio > canvas_ratio:
-            w = canvas_width
-            h = canvas_width / pic_ratio
-        elif pic_ratio < canvas_ratio:
-            h = canvas_height
-            w = canvas_height * pic_ratio
-        else:
-            w = canvas_width
-            h = canvas_height
-
-        result_cv_image = cv2.resize(self.first_frame, (int(w), int(h)))
-
-        # canvas显示opencv格式的图片
-        global tk_img  # 必须保持对图片的引用
-        tk_img = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(result_cv_image, cv2.COLOR_BGR2RGB)))
-
-        center_x = int(canvas_width / 2)
-        center_y = int(canvas_height / 2)
-        self.canvas.create_image(center_x, center_y, image=tk_img)
-
     def rotate_first_frame(self):
         self.rotate_degree = (self.rotate_degree + 90) % 360
         # print(f"rotate degree = {self.rotate_degree}")
         self.first_frame = rotate_frame(self.first_frame, 90)
-        self.update_canvas_frame_auto_resize()
+        clear_tk_img_list(self.TAG_CANVAS)
+        show_frame_in_canvas_auto_resize(self.canvas, self.first_frame, self.TAG_CANVAS)
 
     def get_rotated_video_path(self):
         if self.rotate_degree == 0:
             return self.video_path
         return get_des_file_path(self.video_path, suffix=f'rotated_{self.rotate_degree}')
 
+    def get_save_path(self):
+        return get_detected_save_path(self.get_rotated_video_path())
+
     def update_progress(self, text):
         self.label_process['text'] = text
-        # TODO: log
+        self.log(text)
 
     def log(self, text):
         # TODO: get timing
         pass
+
+    def update_result_count(self, count):
+        self.result_count = count
+
+    def update_result_album(self, album):
+        self.result_album = album
+
+    def show_result_window(self):
+        # test result_album
+        # self.result_album = {}
+        # self.result_album['111'] = cv2.imread(r"C:\Users\Meleny\Pictures\wallpaper\111.jpg")
+        # self.result_album['222'] = cv2.imread(r"C:\Users\Meleny\Pictures\wallpaper\222.jpg")
+        # self.result_album['333'] = cv2.imread(r"C:\Users\Meleny\Pictures\wallpaper\222_small.jpg")
+
+        if self.result_album is None:
+            return
+
+        self.result_window = tk.Toplevel(self.window)
+        self.result_window.geometry('600x400')
+        self.result_window.title('检测结果')
+        self.result_window.update()
+
+        album_length = len(self.result_album)
+        canvas_width = int(self.result_window.winfo_width() / album_length)
+        idx = 0
+        list_result_canvas = []
+        for img in self.result_album.values():
+            result_canvas = tk.Canvas(self.result_window, width=canvas_width)
+            result_canvas.grid(row=0, column=idx, columnspan=1)
+            result_canvas.update()
+            list_result_canvas.append(result_canvas)
+            show_frame_in_canvas_auto_resize(result_canvas, img, self.TAG_TEMP)
+            idx += 1
+
+        result_label = tk.Label(self.result_window, text=f"检测详细结果请查看：\n{self.get_save_path()}")
+        # result_label = tk.Label(self.result_window, text=f"检测详细结果请查看")
+        result_label.grid(row=1, columnspan=idx, sticky='we')
+
+        self.result_window.protocol(self.WINDOW_CLOSE_EVENT, self.on_result_window_closing)
+        self.result_window.mainloop()
+
+    def on_closing(self):
+        video_state = self.btn_choose_video['state']
+        model_state = self.btn_choose_model['state']
+        disable = tk.DISABLED
+
+        if video_state == disable and model_state == disable:
+            if messagebox.askokcancel("退出", "退出会导致检测失败，确定退出吗？"):
+                save_path = self.get_save_path()
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+                self.window.destroy()
+        else:
+            self.window.destroy()
+
+    def on_result_window_closing(self):
+        clear_tk_img_list(self.TAG_TEMP)
+        self.result_window.destroy()
+        self.result_window = None
+
+    def on_choose_window_closing(self):
+        self.choose_window.destroy()
+        self.choose_window = None
 
 
 if __name__ == '__main__':
