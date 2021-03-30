@@ -8,12 +8,6 @@ from path_helper import *
 from widget_helper import *
 
 
-# TODO: delete test data and test code
-# TODO: 耗时操作打 progress
-# TODO: 打 log
-# TODO: 检查所有 pass 的方法
-# TODO: 在关闭窗口的时候加一些保护的行为，比如关闭资源
-# TODO: start_new_thread 改用threading，set_deamon(True)
 class Window:
     # ui
     window = None
@@ -50,8 +44,6 @@ class Window:
     TEXT_VIDEO_FILE_TYPE = "视频文件"
     TEXT_MODEL_FILE_TYPE = "模型文件"
 
-    TEXT_TEST = "testing..."
-
     VIDEO_TYPE = ".mp4 .m4v .mkv .webm .mov .avi .wmv .mpg .flv"
     MODEL_TYPE = ".pt"
 
@@ -70,8 +62,6 @@ class Window:
     is_video = False
     is_model = False
 
-    # TODO: result count 好像没啥用
-    result_count = {}
     result_album = {}
 
     def __init__(self):
@@ -166,7 +156,6 @@ class Window:
             self.btn_start_detect['state'] = tk.NORMAL
 
     def restore_result_data(self):
-        self.result_count = {}
         self.result_album = {}
 
     def choose_video_clicked(self):
@@ -223,6 +212,7 @@ class Window:
 
     def rotate_video_clicked(self):
         self.rotate_first_frame()
+        self.restore_result_data()
 
     def choose_model_clicked(self):
         self.restore_model_data()
@@ -279,6 +269,7 @@ class Window:
     def choose_classes_clicked(self):
         # TODO: 焦点控制。如何将焦点控制在新打开的窗口，在新窗口打开的时候不允许点击主窗口？
         self.show_choose_window()
+        self.restore_result_data()
 
     def show_choose_window(self):
         if self.choose_window is not None:
@@ -319,7 +310,7 @@ class Window:
         btn_deselect_all = tk.Button(self.choose_window, text='deselect all', command=self.deselect_all_clicked)
         btn_deselect_all.grid(row=1, column=half_weight, columnspan=half_weight, sticky='we')
 
-        btn_confirm = tk.Button(self.choose_window, text="confirm", command=self.confirm_clicked)
+        btn_confirm = tk.Button(self.choose_window, text="confirm", command=self.on_choose_window_closing)
         btn_confirm.grid(row=2, column=0, columnspan=all_weight, sticky='we')
 
         self.choose_window.protocol(self.WINDOW_CLOSE_EVENT, self.on_choose_window_closing)
@@ -333,10 +324,6 @@ class Window:
         for bool_var in self.dict_chosen_classes.values():
             bool_var.set(False)
 
-    def confirm_clicked(self):
-        # print(f'res = {self.get_chosen_classes_list()}')
-        self.choose_window.destroy()
-
     def get_chosen_classes_list(self):
         res = []
         for key in self.dict_chosen_classes:
@@ -345,8 +332,11 @@ class Window:
         return res
 
     def start_detect_clicked(self):
-        self.disable_all_buttons()
-        self.start_detect()
+        if len(self.result_album) == 0:
+            self.disable_all_buttons()
+            self.start_detect()
+        else:
+            self.show_result_window()
 
     def disable_all_buttons(self):
         self.btn_choose_video['state'] = tk.DISABLED
@@ -376,6 +366,7 @@ class Window:
         func_detect(weights=self.model_path,
                     source=self.get_rotated_video_path(),
                     classes=self.get_chosen_classes_list(),
+                    log_function=self.update_progress,
                     update_album_function=self.update_result_album)
         self.update_progress("检测完成...")
 
@@ -405,29 +396,13 @@ class Window:
         return get_detected_save_path(self.get_rotated_video_path())
 
     def update_progress(self, text):
+        print(text)
         self.label_process['text'] = text
-        self.log(text)
-
-    def log(self, text):
-        # TODO: get timing
-        pass
-
-    def update_result_count(self, count):
-        self.result_count = count
 
     def update_result_album(self, album):
         self.result_album = album
 
-    # def show_result_window_in_main_thread(self):
-    #     self.from_dummy_thread(self.show_result_window())
-
     def show_result_window(self):
-        # test result_album
-        # self.result_album = {}
-        # self.result_album['111'] = cv2.imread(r"C:\Users\Meleny\Pictures\wallpaper\111.jpg")
-        # self.result_album['222'] = cv2.imread(r"C:\Users\Meleny\Pictures\wallpaper\222.jpg")
-        # self.result_album['333'] = cv2.imread(r"C:\Users\Meleny\Pictures\wallpaper\222_small.jpg")
-
         if self.result_album is None:
             return
 

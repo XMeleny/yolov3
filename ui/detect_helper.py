@@ -16,7 +16,6 @@ def normal_print(text):
     print(text)
 
 
-# TODO: add function: 1. log, 2. alarm
 def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classes=None,
                 log_function=normal_print, update_album_function=None):
     album = {}
@@ -95,7 +94,7 @@ def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classe
                                 conf_dict[name] = conf
 
                 # Print time (inference + NMS)
-                print(f'{s}Done. ({t2 - t1:.3f}s)')
+                log_function(f'{s}Done. ({t2 - t1:.3f}s)')
 
                 # Save results (image with detections)
                 if dataset.mode == 'image':
