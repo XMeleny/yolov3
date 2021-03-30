@@ -154,9 +154,12 @@ class Window:
     def enable_btn_start_detect(self):
         if self.is_video and self.is_model:
             self.btn_start_detect['state'] = tk.NORMAL
+        if len(self.result_album) > 0:
+            self.btn_start_detect['text'] = '显示结果'
 
     def restore_result_data(self):
         self.result_album = {}
+        self.btn_start_detect['text'] = self.TEXT_START_DETECT
 
     def choose_video_clicked(self):
         self.restore_video_data()
@@ -371,8 +374,6 @@ class Window:
         self.update_progress("检测完成...")
 
         self.enable_all_buttons()
-
-        self.show_result_window()  # FIXME: 应该运行在主线程中，否则会抛出运行时错误
 
     def start_detect(self):
         try:
