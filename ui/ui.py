@@ -35,11 +35,28 @@ class Window:
     FILE_PATH_LABEL_WEIGHT = 10  # 表示路径标签的宽度横跨多少列
 
     # data
+    WINDOW_TITLE = 'yolov3'
+    WINDOW_TITLE_CHOOSE_CLASSES = '选择检测类别'
+    WINDOW_TITLE_SHOW_RESULT = '检测结果'
+
     TEXT_CHOOSE_VIDEO = '选择视频'
     TEXT_ROTATE_VIDEO = '旋转视频'
     TEXT_CHOOSE_MODEL = '选择模型'
     TEXT_CHOOSE_CLASSES = '选择检测类别'
     TEXT_START_DETECT = '开始检测'
+    TEXT_SHOW_RESULT = '显示结果'
+
+    TEXT_QUIT = '退出'
+    TEXT_QUIT_INFO = '退出会导致检测失败，确定退出吗？'
+
+    PROGRESS_START_GET_VIDEO = '开始获取视频...'
+    PROGRESS_END_GET_VIDEO = '视频获取完成。'
+    PROGRESS_START_GET_CLASSES = '开始获取检测类型...'
+    PROGRESS_END_GET_CLASSES = '检测类型获取完成。'
+    PROGRESS_START_ROTATE = '开始旋转视频...'
+    PROGRESS_END_ROTATE = '视频旋转完成。'
+    PROGRESS_START_DETECT = '开始检测...'
+    PROGRESS_END_DETECT = '检测完成。'
 
     TEXT_VIDEO_FILE_TYPE = "视频文件"
     TEXT_MODEL_FILE_TYPE = "模型文件"
@@ -69,6 +86,7 @@ class Window:
 
     def init_ui(self):
         self.window = get_max_window()
+        self.window.title(self.WINDOW_TITLE)
         self.window.update()
 
         self.create_widgets()
@@ -155,7 +173,7 @@ class Window:
         if self.is_video and self.is_model:
             self.btn_start_detect['state'] = tk.NORMAL
         if len(self.result_album) > 0:
-            self.btn_start_detect['text'] = '显示结果'
+            self.btn_start_detect['text'] = self.TEXT_SHOW_RESULT
 
     def restore_result_data(self):
         self.result_album = {}
@@ -197,7 +215,7 @@ class Window:
         if len(self.video_path) <= 0:
             return
 
-        self.update_progress("获取视频开始...")
+        self.update_progress(self.PROGRESS_START_GET_VIDEO)
         cap = cv2.VideoCapture(self.video_path)
 
         self.is_video = cap.isOpened()
@@ -211,7 +229,7 @@ class Window:
                 self.enable_btn_start_detect()
 
         cap.release()
-        self.update_progress("视频获取完成...")
+        self.update_progress(self.PROGRESS_END_GET_VIDEO)
 
     def rotate_video_clicked(self):
         self.rotate_first_frame()
@@ -251,7 +269,7 @@ class Window:
         if len(self.model_path) <= 0:
             return
 
-        self.update_progress("开始获取检测类型...")
+        self.update_progress(self.PROGRESS_START_GET_CLASSES)
         try:
             model = attempt_load(self.model_path)
 
@@ -267,7 +285,7 @@ class Window:
             self.is_model = False
             print(f"error when getting classes, Exception = {e}")
 
-        self.update_progress("检测类型获取完成...")
+        self.update_progress(self.PROGRESS_END_GET_CLASSES)
 
     def choose_classes_clicked(self):
         # TODO: 焦点控制。如何将焦点控制在新打开的窗口，在新窗口打开的时候不允许点击主窗口？
@@ -278,7 +296,7 @@ class Window:
         if self.choose_window is not None:
             return
         self.choose_window = tk.Toplevel(self.window)
-        self.choose_window.title('choose classes to detect')
+        self.choose_window.title(self.WINDOW_TITLE_CHOOSE_CLASSES)
 
         canvas_weight = 10
 
@@ -361,17 +379,17 @@ class Window:
         Please use start_new_thread to run this function
         """
         if self.rotate_degree != 0:
-            self.update_progress("开始旋转视频...")
+            self.update_progress(self.PROGRESS_START_ROTATE)
             rotate_video(self.video_path, self.rotate_degree, self.get_rotated_video_path())
-            self.update_progress("视频旋转完成...")
+            self.update_progress(self.PROGRESS_END_ROTATE)
 
-        self.update_progress("开始检测...")
+        self.update_progress(self.PROGRESS_START_DETECT)
         func_detect(weights=self.model_path,
                     source=self.get_rotated_video_path(),
                     classes=self.get_chosen_classes_list(),
                     log_function=self.update_progress,
                     update_album_function=self.update_result_album)
-        self.update_progress("检测完成...")
+        self.update_progress(self.PROGRESS_END_DETECT)
 
         self.enable_all_buttons()
 
@@ -408,8 +426,8 @@ class Window:
             return
 
         self.result_window = tk.Toplevel(self.window)
-        self.result_window.geometry('600x400')
-        self.result_window.title('检测结果')
+        self.result_window.geometry('800x600')
+        self.result_window.title(self.WINDOW_TITLE_SHOW_RESULT)
         self.result_window.update()
 
         album_length = len(self.result_album)
@@ -425,7 +443,6 @@ class Window:
             idx += 1
 
         result_label = tk.Label(self.result_window, text=f"检测详细结果请查看：\n{self.get_save_path()}")
-        # result_label = tk.Label(self.result_window, text=f"检测详细结果请查看")
         result_label.grid(row=1, columnspan=idx, sticky='we')
 
         self.result_window.protocol(self.WINDOW_CLOSE_EVENT, self.on_result_window_closing)
@@ -437,7 +454,7 @@ class Window:
         disable = tk.DISABLED
 
         if video_state == disable and model_state == disable:
-            if messagebox.askokcancel("退出", "退出会导致检测失败，确定退出吗？"):
+            if messagebox.askokcancel(self.TEXT_QUIT, self.TEXT_QUIT_INFO):
                 self.window.destroy()
         else:
             self.window.destroy()

@@ -3,7 +3,6 @@ import tkinter as tk
 
 def get_max_window():
     res_window = tk.Tk()
-    res_window.title("my window")
 
     w, h = res_window.maxsize()
     res_window.geometry("{}x{}".format(w, h))
