@@ -15,3 +15,6 @@
 # scrollable frame: https://stackoverflow.com/questions/16188420/tkinter-scrollbar-for-frame
 
 # 关闭窗口事件： https://cloud.tencent.com/developer/ask/34460
+
+# 多线程运行 https://stackoverflow.com/questions/18989446/execute-python-function-in-main-thread-from-call-in-dummy-thread
+# mainloop中也有一个死循环，同在主线程中，非常麻烦

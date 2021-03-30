@@ -5,12 +5,11 @@ import torch
 from numpy import random
 
 from models.experimental import attempt_load
+from path_helper import *
 from utils.datasets import LoadImages
 from utils.general import check_img_size, non_max_suppression, scale_coords, set_logging
 from utils.plots import plot_one_box
 from utils.torch_utils import select_device, time_synchronized
-
-from path_helper import *
 
 
 def normal_print(text):
@@ -19,9 +18,9 @@ def normal_print(text):
 
 # TODO: add function: 1. log, 2. alarm
 def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classes=None,
-                log_function=normal_print, alarm_function=normal_print):
-    count = {}
+                log_function=normal_print, update_album_function=None):
     album = {}
+    conf_dict = {}
 
     with torch.no_grad():
         imgsz = 640
@@ -89,14 +88,11 @@ def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classe
                         label = f'{names[int(cls)]} {conf:.2f}'
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
-                        # TODO: 统计数据here
                         if classes is None or int(cls) in classes:
                             name = names[int(cls)]
-                            if name in count:
-                                count[name] += 1
-                            else:
-                                count[name] = 1
+                            if name not in album or conf > conf_dict[name]:
                                 album[name] = im0
+                                conf_dict[name] = conf
 
                 # Print time (inference + NMS)
                 print(f'{s}Done. ({t2 - t1:.3f}s)')
@@ -119,7 +115,7 @@ def func_detect(weights, source, conf_threshold=0.25, iou_threshold=0.45, classe
 
         log_function(f"Results saved to {save_dir}")
         log_function(f'Done. ({time.time() - t0:.3f}s)')
-        alarm_function(f'statistic data = {count}')
+        update_album_function(album)
 
 
 if __name__ == '__main__':

@@ -2,11 +2,9 @@ from _thread import *
 from tkinter import filedialog
 from tkinter import messagebox
 
-from PIL import ImageTk, Image
-
 from detect_helper import *
-from path_helper import *
 from image_and_video_helper import *
+from path_helper import *
 from widget_helper import *
 
 
@@ -15,7 +13,7 @@ from widget_helper import *
 # TODO: 打 log
 # TODO: 检查所有 pass 的方法
 # TODO: 在关闭窗口的时候加一些保护的行为，比如关闭资源
-
+# TODO: start_new_thread 改用threading，set_deamon(True)
 class Window:
     # ui
     window = None
@@ -283,6 +281,8 @@ class Window:
         self.show_choose_window()
 
     def show_choose_window(self):
+        if self.choose_window is not None:
+            return
         self.choose_window = tk.Toplevel(self.window)
         self.choose_window.title('choose classes to detect')
 
@@ -319,11 +319,10 @@ class Window:
         btn_deselect_all = tk.Button(self.choose_window, text='deselect all', command=self.deselect_all_clicked)
         btn_deselect_all.grid(row=1, column=half_weight, columnspan=half_weight, sticky='we')
 
-        btn_confirm = tk.Button(self.choose_window, text="confirm",
-                                command=lambda: self.confirm_clicked(self.choose_window))
+        btn_confirm = tk.Button(self.choose_window, text="confirm", command=self.confirm_clicked)
         btn_confirm.grid(row=2, column=0, columnspan=all_weight, sticky='we')
 
-        self.choose_window.protocol(self.WINDOW_CLOSE_EVENT, self.on_choose_window_closing)  # FIXME:
+        self.choose_window.protocol(self.WINDOW_CLOSE_EVENT, self.on_choose_window_closing)
         self.choose_window.mainloop()
 
     def select_all_clicked(self):
@@ -334,9 +333,9 @@ class Window:
         for bool_var in self.dict_chosen_classes.values():
             bool_var.set(False)
 
-    def confirm_clicked(self, choose_window):
-        print(f'res = {self.get_chosen_classes_list()}')
-        choose_window.destroy()
+    def confirm_clicked(self):
+        # print(f'res = {self.get_chosen_classes_list()}')
+        self.choose_window.destroy()
 
     def get_chosen_classes_list(self):
         res = []
@@ -376,10 +375,13 @@ class Window:
         self.update_progress("开始检测...")
         func_detect(weights=self.model_path,
                     source=self.get_rotated_video_path(),
-                    classes=self.get_chosen_classes_list())
+                    classes=self.get_chosen_classes_list(),
+                    update_album_function=self.update_result_album)
         self.update_progress("检测完成...")
 
         self.enable_all_buttons()
+
+        self.show_result_window()  # FIXME: 应该运行在主线程中，否则会抛出运行时错误
 
     def start_detect(self):
         try:
@@ -415,6 +417,9 @@ class Window:
 
     def update_result_album(self, album):
         self.result_album = album
+
+    # def show_result_window_in_main_thread(self):
+    #     self.from_dummy_thread(self.show_result_window())
 
     def show_result_window(self):
         # test result_album
@@ -457,9 +462,6 @@ class Window:
 
         if video_state == disable and model_state == disable:
             if messagebox.askokcancel("退出", "退出会导致检测失败，确定退出吗？"):
-                save_path = self.get_save_path()
-                if os.path.exists(save_path):
-                    os.remove(save_path)
                 self.window.destroy()
         else:
             self.window.destroy()

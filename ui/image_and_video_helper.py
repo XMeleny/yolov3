@@ -85,12 +85,12 @@ def show_frame_in_canvas_auto_resize(canvas, frame, tag=default_tag):
 
     canvas_width = canvas.winfo_width()
     canvas_height = canvas.winfo_height()
-    print(f"canvas w, h = {canvas_width}, {canvas_height}")
+    # print(f"canvas w, h = {canvas_width}, {canvas_height}")
 
     shape = frame.shape
     pic_width = shape[1]
     pic_height = shape[0]
-    print(f"pic w, h = {pic_width}, {pic_height}")
+    # print(f"pic w, h = {pic_width}, {pic_height}")
 
     canvas_ratio = canvas_width / canvas_height
     pic_ratio = pic_width / pic_height
