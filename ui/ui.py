@@ -35,7 +35,7 @@ class Window:
     FILE_PATH_LABEL_WEIGHT = 10  # 表示路径标签的宽度横跨多少列
 
     # data
-    WINDOW_TITLE = 'yolov3'
+    WINDOW_TITLE = 'yolo'
     WINDOW_TITLE_CHOOSE_CLASSES = '选择检测类别'
     WINDOW_TITLE_SHOW_RESULT = '检测结果'
 
@@ -57,6 +57,7 @@ class Window:
     PROGRESS_END_ROTATE = '视频旋转完成。'
     PROGRESS_START_DETECT = '开始检测...'
     PROGRESS_END_DETECT = '检测完成。'
+    PROGRESS_CHOSEN_CLASSES_EMPTY = '选择的检测类别为空，不能进行检测'
 
     TEXT_VIDEO_FILE_TYPE = "视频文件"
     TEXT_MODEL_FILE_TYPE = "模型文件"
@@ -288,9 +289,8 @@ class Window:
         self.update_progress(self.PROGRESS_END_GET_CLASSES)
 
     def choose_classes_clicked(self):
-        # TODO: 焦点控制。如何将焦点控制在新打开的窗口，在新窗口打开的时候不允许点击主窗口？
-        self.show_choose_window()
         self.restore_result_data()
+        self.show_choose_window()
 
     def show_choose_window(self):
         if self.choose_window is not None:
@@ -378,18 +378,22 @@ class Window:
         This function should be run in new thread.
         Please use start_new_thread to run this function
         """
-        if self.rotate_degree != 0:
-            self.update_progress(self.PROGRESS_START_ROTATE)
-            rotate_video(self.video_path, self.rotate_degree, self.get_rotated_video_path())
-            self.update_progress(self.PROGRESS_END_ROTATE)
+        temp_chosen_classes = self.get_chosen_classes_list()
+        if len(temp_chosen_classes) > 0:
+            if self.rotate_degree != 0:
+                self.update_progress(self.PROGRESS_START_ROTATE)
+                rotate_video(self.video_path, self.rotate_degree, self.get_rotated_video_path())
+                self.update_progress(self.PROGRESS_END_ROTATE)
 
-        self.update_progress(self.PROGRESS_START_DETECT)
-        func_detect(weights=self.model_path,
-                    source=self.get_rotated_video_path(),
-                    classes=self.get_chosen_classes_list(),
-                    log_function=self.update_progress,
-                    update_album_function=self.update_result_album)
-        self.update_progress(self.PROGRESS_END_DETECT)
+            self.update_progress(self.PROGRESS_START_DETECT)
+            func_detect(weights=self.model_path,
+                        source=self.get_rotated_video_path(),
+                        classes=self.get_chosen_classes_list(),
+                        log_function=self.update_progress,
+                        update_album_function=self.update_result_album)
+            self.update_progress(self.PROGRESS_END_DETECT)
+        else:
+            self.update_progress(self.PROGRESS_CHOSEN_CLASSES_EMPTY)
 
         self.enable_all_buttons()
 
