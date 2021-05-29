@@ -1,3 +1,11 @@
+import sys
+import os
+
+# 防止命令行执行时 import models 模块出错
+curPath = os.path.abspath(os.path.dirname(__file__))
+rootPath = os.path.split(curPath)[0]
+sys.path.append(rootPath)
+
 import time
 
 import cv2

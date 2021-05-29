@@ -46,6 +46,10 @@ class Window:
     TEXT_START_DETECT = '开始检测'
     TEXT_SHOW_RESULT = '显示结果'
 
+    TEXT_SELECT_ALL = '全选'
+    TEXT_DESELECT_ALL = '全不选'
+    TEXT_CONFIRM = '确定'
+
     TEXT_QUIT = '退出'
     TEXT_QUIT_INFO = '退出会导致检测失败，确定退出吗？'
 
@@ -325,13 +329,13 @@ class Window:
         self.choose_window.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
 
-        btn_select_all = tk.Button(self.choose_window, text="select all", command=self.select_all_clicked)
+        btn_select_all = tk.Button(self.choose_window, text=self.TEXT_SELECT_ALL, command=self.select_all_clicked)
         btn_select_all.grid(row=1, column=0, columnspan=half_weight, sticky='we')
 
-        btn_deselect_all = tk.Button(self.choose_window, text='deselect all', command=self.deselect_all_clicked)
+        btn_deselect_all = tk.Button(self.choose_window, text=self.TEXT_DESELECT_ALL, command=self.deselect_all_clicked)
         btn_deselect_all.grid(row=1, column=half_weight, columnspan=half_weight, sticky='we')
 
-        btn_confirm = tk.Button(self.choose_window, text="confirm", command=self.on_choose_window_closing)
+        btn_confirm = tk.Button(self.choose_window, text=self.TEXT_CONFIRM, command=self.on_choose_window_closing)
         btn_confirm.grid(row=2, column=0, columnspan=all_weight, sticky='we')
 
         self.choose_window.protocol(self.WINDOW_CLOSE_EVENT, self.on_choose_window_closing)
